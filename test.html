@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h1>API Tester</h1>
+
+  <button onclick="testMovies()">Test /movies</button>
+  <button onclick="testRegister()">Register</button>
+  <button onclick="testLogin()">Login</button>
+
+  <pre id="output"></pre>
+
+<script>
+const BASE = "http://localhost:3000/api";
+
+function show(data) {
+  document.getElementById("output").textContent =
+    typeof data === "string" ? data : JSON.stringify(data, null, 2);
+}
+
+async function testMovies() {
+  try {
+    const res = await fetch(`${BASE}/movies`);
+    const data = await res.json();
+    show(data);
+  } catch (err) {
+    show("Error: " + err);
+  }
+}
+
+async function testRegister() {
+  try {
+    const res = await fetch(`${BASE}/auth/register`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        name: "Tester",
+        email: "test@example.com",
+        password: "123456"
+      })
+    });
+    const data = await res.json();
+    show(data);
+  } catch (err) {
+    show("Error: " + err);
+  }
+}
+
+async function testLogin() {
+  try {
+    const res = await fetch(`${BASE}/auth/login`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: "test@example.com",
+        password: "123456"
+      })
+    });
+    const data = await res.json();
+    show(data);
+  } catch (err) {
+    show("Error: " + err);
+  }
+}
+</script>
+
+</body>
+</html>
