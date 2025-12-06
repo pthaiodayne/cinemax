@@ -55,6 +55,7 @@ class Movie {
     
     return rows[0];
   }
+  
 
   static async getAll(filters = {}) {
     let query = `

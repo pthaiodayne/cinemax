@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 interface SelectedCombo {
-  combo_id: number;
+  combo_id: string;
   name: string;
   price: number;
   quantity: number;
@@ -25,6 +25,7 @@ const CheckoutPage: React.FC = () => {
   const screenNumber = searchParams.get('screenNumber') || '1';
   const date = searchParams.get('date') || '';
   const startTime = searchParams.get('startTime') || '';
+  const endTime = searchParams.get('endTime') || '';
   const format = searchParams.get('format') || '2D';
 
   const seatsParam = searchParams.get('seats') || '';
@@ -53,7 +54,7 @@ const CheckoutPage: React.FC = () => {
     const parsed = JSON.parse(combosParam);
     if (Array.isArray(parsed)) {
       combos = parsed.map((c: any) => ({
-        combo_id: Number(c.combo_id),
+        combo_id: String(c.combo_id),
         name: String(c.name),
         price: Number(c.price),
         quantity: Number(c.quantity),
@@ -67,6 +68,69 @@ const CheckoutPage: React.FC = () => {
     () => combos.reduce((sum, c) => sum + c.price * c.quantity, 0),
     [combos]
   );
+
+  async function handleConfirmBooking() {
+  const token = localStorage.getItem('token');
+
+  if (!token) {
+    alert('You must login to book tickets');
+    return;
+  }
+
+  try {
+    const seatsPayload = seats.map((seat) => ({
+      seat_number: seat,
+    }));
+
+    const combosPayload = combos.map((c) => ({
+      combo_id: c.combo_id,
+      quantity: c.quantity,
+    }));
+
+    const payload = {
+      showtime: {
+        theater_id: Number(theaterId),
+        screen_number: Number(screenNumber),
+        start_time: startTime,
+        end_time: endTime, 
+        date,
+      },
+      seats: seatsPayload,
+      combos: combosPayload,
+      payment_method: paymentMethod,
+      payment_status: paymentMethod === 'cash' ? 'unpaid' : 'paid',
+    };
+
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/bookings`,
+      {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(payload),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.error || 'Booking failed');
+      return;
+    }
+
+    alert('Booking created successfully!');
+    console.log('BOOKING RESULT:', data.booking);
+
+    // ✅ Điều hướng sang trang booking detail (nếu có)
+    window.location.href = `/my-bookings`;
+  } catch (err) {
+    console.error('BOOKING ERROR:', err);
+    alert('Network error when creating booking');
+  }
+}
+
 
   const combosTotal =
     combosTotalFromCombos > 0
@@ -110,6 +174,7 @@ const CheckoutPage: React.FC = () => {
                 screenNumber,
                 date,
                 startTime,
+                endTime,
                 format,
                 seats: seatsParam,
                 vipSeats: vipSeatsParam,
@@ -296,11 +361,11 @@ const CheckoutPage: React.FC = () => {
           </div>
 
           <button
-            className="mt-6 w-full px-6 py-3 bg-red-600 rounded-lg text-white font-semibold hover:opacity-90 transition"
-            // TODO: sau này gắn API create booking + thanh toán
-          >
-            Confirm Booking
-          </button>
+  onClick={handleConfirmBooking}
+  className="mt-6 w-full px-6 py-3 bg-red-600 rounded-lg text-white font-semibold hover:opacity-90 transition"
+>
+  Confirm Booking
+</button>
         </section>
       </div>
     </div>

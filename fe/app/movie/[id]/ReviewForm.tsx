@@ -4,22 +4,43 @@ import { useState } from "react";
 
 export default function ReviewForm({ movieId }: { movieId: string }) {
   const [text, setText] = useState("");
-  const [rating, setRating] = useState(10);
+  const [rating, setRating] = useState(5);
 
   async function submit() {
-    await fetch(`${process.env.NEXT_PUBLIC_API_URL}/reviews/${movieId}`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        user: "Anonymous User",
-        review_text: text,
-        rating
-      })
-    });
+    const token = localStorage.getItem("token"); // ✅ lấy token auth
+
+    if (!token) {
+      alert("You must login to submit a review");
+      return;
+    }
+
+    const res = await fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/reviews`, // ✅ ĐÚNG ROUTE
+      {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`, // ✅ BẮT BUỘC
+        },
+        body: JSON.stringify({
+          movie_id: Number(movieId),   // ✅ đúng với MySQL
+          review_text: text,
+          stars: rating               // ✅ backend dùng stars
+        }),
+      }
+    );
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      alert(data.message || "Submit failed");
+      return;
+    }
 
     alert("Submitted!");
     setText("");
-    setRating(10);
+    setRating(5);
+    location.reload(); // ✅ reload để load review mới
   }
 
   return (
@@ -40,8 +61,10 @@ export default function ReviewForm({ movieId }: { movieId: string }) {
           onChange={(e) => setRating(Number(e.target.value))}
           className="bg-black border p-2 rounded"
         >
-          {Array.from({ length: 10 }).map((_, i) => (
-            <option key={i} value={i + 1}>{i + 1}/10</option>
+          {Array.from({ length: 5 }).map((_, i) => (
+            <option key={i} value={i + 1}>
+              {i + 1}/5
+            </option>
           ))}
         </select>
       </div>

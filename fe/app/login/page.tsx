@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import AuthCard from "../auth/AuthCard";
 
@@ -9,31 +9,53 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
+  // 👉 Nếu đã login rồi thì không cho vào trang login nữa, tự về Home
+  useEffect(() => {
+    const token = localStorage.getItem("token");
+    if (token) {
+      router.replace("/"); // không cho quay lại login bằng back
+    }
+  }, [router]);
+
   async function handleLogin(e: any) {
     e.preventDefault();
 
-    const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/auth/login`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, password }),
-    });
+    try {
+      const res = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/auth/login`,
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        }
+      );
 
-    const data = await res.json();
-    console.log("Login response:", data);
+      const data = await res.json();
+      console.log("Login response:", data);
 
-    if (data.token) {
-      localStorage.setItem("token", data.token);
-      alert("Login success!");
-      router.push("/");
-    } else {
-      alert("Login failed: " + data.message);
+      if (!res.ok) {
+        alert("Login failed: " + (data.error || data.message || "Unknown error"));
+        return;
+      }
+
+      if (data.token) {
+        localStorage.setItem("token", data.token);
+        alert("Login success!");
+
+        // 👉 Redirect về Home page
+        router.push("/");
+      } else {
+        alert("Login failed: " + (data.error || data.message || "Unknown error"));
+      }
+    } catch (err) {
+      console.error(err);
+      alert("Cannot connect to server");
     }
   }
 
   return (
     <AuthCard title="Sign in to your account">
       <form className="flex flex-col space-y-4" onSubmit={handleLogin}>
-        
         <input
           className="bg-[#1a1a1a] p-3 rounded-lg border border-[#333] focus:border-red-500 outline-none"
           placeholder="Email address"
@@ -58,7 +80,7 @@ export default function LoginPage() {
       </form>
 
       <p className="text-center text-gray-400 mt-6">
-        Don't have an account?
+        Don&apos;t have an account?
         <a className="text-red-500 hover:underline ml-1" href="/register">
           Register
         </a>

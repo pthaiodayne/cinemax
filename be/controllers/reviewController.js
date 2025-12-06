@@ -88,6 +88,21 @@ exports.updateReview = async (req, res, next) => {
   }
 };
 
+// ✅ GET ONLY MOVIE RATING STATS (NO REVIEWS)
+exports.getMovieRatingOnly = async (req, res, next) => {
+  try {
+    const stats = await Review.getMovieStats(req.params.movieId);
+
+    res.json({
+      average_rating: Number(stats.average_rating || 0),
+      total_reviews: Number(stats.total_reviews || 0)
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+
 //delete review
 exports.deleteReview = async (req, res, next) => {
   try {

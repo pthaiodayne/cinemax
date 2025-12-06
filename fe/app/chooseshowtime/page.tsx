@@ -22,6 +22,7 @@ interface Showtime {
   startTime?: string;
 
   end_time?: string;
+  endTime?:string;
   date?: string | Date;
 
   format?: string; // nếu sau này BE có cột format thì xài được
@@ -297,13 +298,11 @@ const ChooseShowtimePage: React.FC = () => {
 
   const formatTimeLabel = (st: Showtime) => {
     const start = st.start_time || st.startTime || '09:00:00';
+    const end = st.end_time  || st.endTime||'09:00:00';
     const rawDate = st.date || selectedDate || '';
     const dateKey = normalizeDateKey(rawDate as any);
     const dt = new Date(`${dateKey}T${start}`);
-    return dt.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
+    return end ? `${start.slice(0,5)} - ${end.slice(0,5)}` : start.slice(0,5);
   };
 
   const formatLabel = (st: Showtime) =>
@@ -555,7 +554,8 @@ const ChooseShowtimePage: React.FC = () => {
                                   theaterName: theaterName, // lấy từ theaterInfoMap như bạn đang có
                                   screenNumber: (st.screen_number ?? 1).toString(),
                                   date: dateKey,
-                                  startTime: st.start_time || st.startTime || '',
+                                 startTime: st.start_time || st.startTime || '',
+                                  endTime: st.end_time || st.endTime || '',
                                   format, // 2D / 3D / IMAX
                                 },
                               }}

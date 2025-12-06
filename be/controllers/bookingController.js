@@ -12,7 +12,7 @@ exports.getMyBookings = async (req, res, next) => {
       return res.status(403).json({ error: 'Only customers can view their bookings' });
     }
 
-    const bookings = await Booking.getByCustomer(req.user.userId);
+    const bookings = await Booking.getByUser(req.user.userId);
     console.log(`Retrieved ${bookings.length} bookings for customer ID ${req.user.userId}`);
 
     res.json({
@@ -35,7 +35,7 @@ exports.getBookingById = async (req, res, next) => {
     }
 
     //check: user owns this booking or is staff
-    if (req.user.userType === 'customer' && booking.customer_id !== req.user.userId) {
+    if (req.user.userType === 'customer' && booking.user_id !== req.user.userId) {
       console.log(`Access denied: Customer ID ${req.user.userId} tried to access booking ID ${req.params.id}`);
       return res.status(403).json({ error: 'Access denied' });
     }
@@ -147,15 +147,19 @@ exports.createBooking = async (req, res, next) => {
       
       await Ticket.create({
         booking_id: bookingId,
-        theater_id,
-        screen_number,
+
+        // ✅ ĐÚNG theo Ticket.create
+        price_paid: seat.price,
+
+        theater_id_seat: theater_id,
+        screen_number_seat: screen_number,
         seat_number: seatInfo.seat_number,
-        showtime_theater_id: theater_id,
-        showtime_screen_number: screen_number,
-        showtime_start_time: start_time,
-        showtime_end_time: end_time,
-        showtime_date: date,
-        ticket_price: seat.price
+
+        theater_id_showtime: theater_id,
+        screen_number_showtime: screen_number,
+        start_time: start_time,
+        end_time: end_time,
+        date: date
       }, connection);
     }
 

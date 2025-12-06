@@ -52,21 +52,29 @@ class Seat {
   }
 
   //check specific seats availability for showtime
-  static async checkAvailability(seatNumbers, theater_id, screen_number, start_time, end_time, date) {
-    if (!seatNumbers || seatNumbers.length === 0) return true;
+static async checkAvailability(
+  theater_id,
+  screen_number,
+  seat_number,
+  start_time,
+  end_time,
+  date
+) {
+  const [rows] = await pool.execute(
+    `SELECT COUNT(*) as booked_count
+     FROM ticket
+     WHERE seat_number = ?
+     AND theater_id_showtime = ?
+     AND screen_number_showtime = ?
+     AND start_time = ?
+     AND end_time = ?
+     AND date = ?`,
+    [seat_number, theater_id, screen_number, start_time, end_time, date]
+  );
 
-    const placeholders = seatNumbers.map(() => '?').join(',');
-    const [rows] = await pool.execute(
-      `SELECT COUNT(*) as booked_count
-       FROM ticket
-       WHERE seat_number IN (${placeholders})
-       AND theater_id_showtime = ? AND screen_number_showtime = ?
-       AND start_time = ? AND end_time = ? AND date = ?`,
-      [...seatNumbers, theater_id, screen_number, start_time, end_time, date]
-    );
+  return rows[0].booked_count === 0;
+}
 
-    return rows[0].booked_count === 0;
-  }
 }
 
 module.exports = Seat;

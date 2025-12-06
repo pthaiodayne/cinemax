@@ -8,9 +8,18 @@ const router = express.Router();
 
 //validation rules
 const reviewValidation = [
-  body('movie_id').isInt({ min: 1 }).withMessage('Valid movie ID is required'),
-  body('stars').isInt({ min: 1, max: 5 }).withMessage('Rating must be between 1 and 5'),
-  body('review_text').optional().trim()
+  body('movie_id')
+    .isInt({ min: 1 })
+    .withMessage('Valid movie ID is required'),
+
+  body('stars')
+    .isInt({ min: 1, max: 5 })
+    .withMessage('Rating must be between 1 and 5'),
+
+  body('review_text')
+    .notEmpty()
+    .withMessage('Review text is required')
+    .trim()
 ];
 
 const updateReviewValidation = [
@@ -26,5 +35,6 @@ router.post('/', auth, reviewValidation, validate, reviewController.createReview
 router.get('/my-reviews', auth, reviewController.getMyReviews); // GET /api/reviews/my-reviews
 router.put('/:movieId/:ratingId', auth, updateReviewValidation, validate, reviewController.updateReview); // PUT /api/reviews/:movieId/:ratingId
 router.delete('/:movieId/:ratingId', auth, reviewController.deleteReview); // DELETE /api/reviews/:movieId/:ratingId
+router.get('/:movieId/stats', reviewController.getMovieRatingOnly);
 
 module.exports = router;

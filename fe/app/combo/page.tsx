@@ -8,7 +8,7 @@ const API_BASE =
   process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
 
 interface ComboFromApi {
-  combo_id: number;
+  combo_id: string;
   name: string;
   price: number;
   image_url?: string;
@@ -21,7 +21,7 @@ interface ComboItem extends ComboFromApi {
 }
 
 type SelectedComboFromQuery = {
-  combo_id: number;
+  combo_id: string;
   quantity: number;
   name?: string;
   price?: number;
@@ -41,6 +41,7 @@ const ComboPage: React.FC = () => {
   const screenNumber = searchParams.get('screenNumber') || '1';
   const date = searchParams.get('date') || '';
   const startTime = searchParams.get('startTime') || '';
+  const endTime = searchParams.get('endTime') || '';
   const format = searchParams.get('format') || '2D';
 
   const seatsParam = searchParams.get('seats') || '';
@@ -217,6 +218,7 @@ const ComboPage: React.FC = () => {
                 screenNumber,
                 date,
                 startTime,
+                endTime,
                 format,
 
                 seats: seatsParam,
@@ -388,8 +390,8 @@ const ComboPage: React.FC = () => {
                   screenNumber,
                   date,
                   startTime,
+                  endTime,
                   format,
-
                   seats: seatsParam,
                   vipSeats: vipSeatsParam,
                   normalSeats: normalSeatsParam,

@@ -72,6 +72,8 @@ class Review {
     return rows[0];
   }
 
+  
+
   static async update(movieId, userId, ratingId, updateData) {
     const fields = [];
     const params = [];

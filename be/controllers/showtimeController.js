@@ -78,8 +78,8 @@ exports.createShowtime = async (req, res, next) => {
       theater_id,
       screen_number,
       start_time,
-      end_time,
-      date
+      date,
+      user_id: req.user.userId   // ✅ BẮT BUỘC PHẢI CÓ
     });
 
     const showtime = await Showtime.findById(

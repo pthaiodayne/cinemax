@@ -2,96 +2,168 @@ const { pool } = require('../db/connection');
 
 class Showtime {
   static async create(showtimeData) {
-    const {
-      theater_id, screen_number, start_time, end_time,
-      date, user_id, movie_id
-    } = showtimeData;
+  const {
+    theater_id,
+    screen_number,
+    start_time,
+    date,
+    user_id,
+    movie_id
+  } = showtimeData;
 
-    const [result] = await pool.execute(
-      `INSERT INTO showtime (theater_id, screen_number, start_time, end_time, date, user_id, movie_id)
-       VALUES (?, ?, ?, ?, ?, ?, ?)`,
-      [theater_id, screen_number, start_time, end_time, date, user_id, movie_id]
-    );
-    return { theater_id, screen_number, start_time, end_time, date };
-  }
+  if (!user_id) throw new Error('Missing user_id when creating showtime');
+
+  // 1) Insert showtime (trigger sẽ tự set end_time)
+  await pool.execute(
+    `INSERT INTO showtime 
+     (theater_id, screen_number, start_time, date, user_id, movie_id)
+     VALUES (?, ?, ?, ?, ?, ?)`,
+    [theater_id, screen_number, start_time, date, user_id, movie_id]
+  );
+
+  // 2) Query lại showtime vừa tạo để lấy end_time
+  const [rows] = await pool.execute(
+    `SELECT 
+       theater_id,
+       screen_number,
+       start_time,
+       end_time,
+       DATE_FORMAT(date, '%Y-%m-%d') AS date
+     FROM showtime
+     WHERE theater_id = ?
+       AND screen_number = ?
+       AND start_time = ?
+       AND date = ?`,
+    [theater_id, screen_number, start_time, date]
+  );
+
+  return rows[0];  // ✅ có cả end_time + date format chuẩn
+}
+
 
   static async findById(theater_id, screen_number, start_time, end_time, date) {
-    const [rows] = await pool.execute(
-      `SELECT s.*, m.title, m.duration, m.image_url as movie_image,
-            t.name as theater_name, t.location, t.district,
-            a.formats as auditorium_format,
-            st.name as staff_name
-       FROM showtime s
-       JOIN movie m ON s.movie_id = m.movie_id
-       JOIN theater t ON s.theater_id = t.theater_id
-       JOIN auditorium a ON s.theater_id = a.theater_id AND s.screen_number = a.screen_number
-       JOIN staff st ON s.user_id = st.user_id
-       WHERE s.theater_id = ? AND s.screen_number = ? AND s.start_time = ? AND s.end_time = ? AND s.date = ?`,
-      [theater_id, screen_number, start_time, end_time, date]
-    );
-    return rows[0];
-  }
+  const [rows] = await pool.execute(
+    `
+    SELECT 
+      s.theater_id,
+      s.screen_number,
+      s.start_time,
+      s.end_time,
+      DATE_FORMAT(s.date, '%Y-%m-%d') AS date,
+      s.user_id,
+      s.movie_id,
+      m.title, 
+      m.duration, 
+      m.image_url AS movie_image,
+      t.name AS theater_name, 
+      t.location, 
+      t.district,
+      a.formats AS auditorium_format,
+      st.name AS staff_name
+    FROM showtime s
+    JOIN movie m ON s.movie_id = m.movie_id
+    JOIN theater t ON s.theater_id = t.theater_id
+    JOIN auditorium a 
+      ON s.theater_id = a.theater_id 
+     AND s.screen_number = a.screen_number
+    JOIN staff st ON s.user_id = st.user_id
+    WHERE s.theater_id = ? 
+      AND s.screen_number = ? 
+      AND s.start_time = ? 
+      AND s.end_time = ? 
+      AND s.date = ?
+    `,
+    [theater_id, screen_number, start_time, end_time, date]
+  );
+
+  return rows[0];
+}
+
 
   static async getByMovie(movieId, filters = {}) {
-    let query = `
-      SELECT s.*, t.name as theater_name, t.location, t.district,
-            a.formats as auditorium_format
-      FROM showtime s
-      JOIN theater t ON s.theater_id = t.theater_id
-      JOIN auditorium a ON s.theater_id = a.theater_id AND s.screen_number = a.screen_number
-      WHERE s.movie_id = ?
-    `;
-    const params = [movieId];
+  let query = `
+    SELECT 
+      s.theater_id,
+      s.screen_number,
+      s.start_time,
+      s.end_time,
+      DATE_FORMAT(s.date, '%Y-%m-%d') AS date,
+      s.user_id,
+      s.movie_id,
+      t.name AS theater_name, 
+      t.location, 
+      t.district,
+      a.formats AS auditorium_format
+    FROM showtime s
+    JOIN theater t ON s.theater_id = t.theater_id
+    JOIN auditorium a 
+      ON s.theater_id = a.theater_id 
+     AND s.screen_number = a.screen_number
+    WHERE s.movie_id = ?
+  `;
+  const params = [movieId];
 
-    if (filters.date) {
-      query += ' AND s.date = ?';
-      params.push(filters.date);
-    } else {
-      query += ' AND s.date >= CURDATE()';
-    }
-
-    if (filters.theater_id) {
-      query += ' AND s.theater_id = ?';
-      params.push(filters.theater_id);
-    }
-
-    query += ' ORDER BY s.date, s.start_time';
-
-    const [rows] = await pool.execute(query, params);
-    return rows;
+  if (filters.date) {
+    query += ' AND s.date = ?';
+    params.push(filters.date);
+  } else {
+    query += ' AND s.date >= CURDATE()';
   }
+
+  if (filters.theater_id) {
+    query += ' AND s.theater_id = ?';
+    params.push(filters.theater_id);
+  }
+
+  query += ' ORDER BY s.date, s.start_time';
+
+  const [rows] = await pool.execute(query, params);
+  return rows;
+}
+
 
   static async getAll(filters = {}) {
-    let query = `
-      SELECT s.*, m.title, m.image_url as movie_image,
-            t.name as theater_name, t.location
-      FROM showtime s
-      JOIN movie m ON s.movie_id = m.movie_id
-      JOIN theater t ON s.theater_id = t.theater_id
-      WHERE 1=1
-    `;
-    const params = [];
+  let query = `
+    SELECT 
+      s.theater_id,
+      s.screen_number,
+      s.start_time,
+      s.end_time,
+      DATE_FORMAT(s.date, '%Y-%m-%d') AS date,
+      s.user_id,
+      s.movie_id,
+      m.title, 
+      m.image_url AS movie_image,
+      t.name AS theater_name, 
+      t.location
+    FROM showtime s
+    JOIN movie m ON s.movie_id = m.movie_id
+    JOIN theater t ON s.theater_id = t.theater_id
+    WHERE 1=1
+  `;
+  const params = [];
 
-    if (filters.date) {
-      query += ' AND s.date = ?';
-      params.push(filters.date);
-    }
-
-    if (filters.theater_id) {
-      query += ' AND s.theater_id = ?';
-      params.push(filters.theater_id);
-    }
-
-    if (filters.movie_id) {
-      query += ' AND s.movie_id = ?';
-      params.push(filters.movie_id);
-    }
-
-    query += ' ORDER BY s.date, s.start_time';
-
-    const [rows] = await pool.execute(query, params);
-    return rows;
+  if (filters.date) {
+    query += ' AND s.date = ?';
+    params.push(filters.date);
   }
+
+  if (filters.theater_id) {
+    query += ' AND s.theater_id = ?';
+    params.push(filters.theater_id);
+  }
+
+  if (filters.movie_id) {
+    query += ' AND s.movie_id = ?';
+    params.push(filters.movie_id);
+  }
+
+  query += ' ORDER BY s.date, s.start_time';
+
+  const [rows] = await pool.execute(query, params);
+  return rows;
+}
+
 
   static async update(theater_id, screen_number, start_time, end_time, date, showtimeData) {
     const fields = [];

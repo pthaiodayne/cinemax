@@ -1,4 +1,6 @@
 "use client";
+
+import { useEffect, useState } from "react";
 import Link from "next/link";
 
 interface Movie {
@@ -6,7 +8,6 @@ interface Movie {
   title: string;
   image_url: string;
   plot_description: string;
-  rating: number;
   duration: number;
 }
 
@@ -15,6 +16,21 @@ interface MovieCardProps {
 }
 
 export default function MovieCard({ movie }: MovieCardProps) {
+  const [rating, setRating] = useState<number>(0);
+
+  useEffect(() => {
+    if (!movie?.movie_id) return;
+
+    fetch(
+      `${process.env.NEXT_PUBLIC_API_URL}/reviews/${movie.movie_id}/stats`
+    )
+      .then((res) => res.json())
+      .then((data) => {
+        setRating(Number(data.average_rating) || 0);
+      })
+      .catch(() => setRating(0));
+  }, [movie.movie_id]);
+
   return (
     <Link href={`/movie/${movie.movie_id}`}>
       <div className="group cursor-pointer bg-[#141414] rounded-xl overflow-hidden shadow-lg hover:scale-105 transition transform duration-300">
@@ -38,7 +54,7 @@ export default function MovieCard({ movie }: MovieCardProps) {
           </p>
 
           <div className="flex items-center justify-between mt-3 text-sm text-gray-300">
-            <span>⭐ {movie.rating?.toFixed(1) || "N/A"}</span>
+            <span>⭐ {rating > 0 ? rating.toFixed(1) : "N/A"}</span>
             <span>{movie.duration}m</span>
           </div>
         </div>

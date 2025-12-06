@@ -26,6 +26,7 @@ const ChooseSeatPage: React.FC = () => {
   const screenNumber = searchParams.get('screenNumber') || '1';
   const date = searchParams.get('date') || '';
   const startTime = searchParams.get('startTime') || '';
+  const endTime = searchParams.get('endTime') || '';
   const format = searchParams.get('format') || '2D';
 
   // ----- khởi tạo selectedSeats từ query (khi quay về từ combo) -----
@@ -298,6 +299,7 @@ const ChooseSeatPage: React.FC = () => {
                 screenNumber,
                 date,
                 startTime,
+                endTime,
                 format,
 
                 // seat info

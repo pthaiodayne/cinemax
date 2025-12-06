@@ -15,13 +15,21 @@ async function getReviews(id: string) {
   const data = await res.json();
   return data.reviews || [];
 }
+async function getMovieRating(id: string) {
+  const res = await fetch(
+    `${process.env.NEXT_PUBLIC_API_URL}/reviews/${id}/stats`,
+    { cache: "no-store" }
+  );
+  const data = await res.json();
+  return Number(data.average_rating) || 0;
+}
 
 export default async function MovieDetailPage({ params }: any) {
   const { id } = await params;
 
   const movie = await getMovie(id);
   const reviews = await getReviews(id);
-
+  const rating = await getMovieRating(id); 
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-white">
       <Navbar />
@@ -53,7 +61,7 @@ export default async function MovieDetailPage({ params }: any) {
           <h1 className="text-6xl font-extrabold">{movie.title}</h1>
 
           <div className="flex gap-6 mt-4 text-lg text-gray-300">
-            <span>⭐ {movie.rating}/10</span>
+            <span>⭐ {rating > 0 ? rating.toFixed(1) : "N/A"} / 5</span>
             <span>⏱ {movie.duration}m</span>
             <span>📅 {movie.release_date?.slice(0, 10)}</span>
           </div>
@@ -90,15 +98,15 @@ export default async function MovieDetailPage({ params }: any) {
               className="bg-[#111] p-6 rounded-xl border border-white/10"
             >
               <div className="flex justify-between">
-                <b>{rev.user}</b>
-                <span className="text-yellow-300">⭐ {rev.rating}/10</span>
+                <b>{rev.customer_name}</b>
+                <span className="text-yellow-300">{rev.stars}/5</span>
               </div>
               <p className="mt-3 text-gray-300">{rev.review_text}</p>
             </div>
           ))}
         </div>
 
-        <ReviewForm movieId={params.id} />
+        <ReviewForm movieId={id} />
       </section>
     </div>
   );

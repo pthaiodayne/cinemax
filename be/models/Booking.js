@@ -2,19 +2,35 @@ const { pool } = require('../db/connection');
 
 class Booking {
   static async create(bookingData, connection = null) {
-    const conn = connection || pool;
-    const {
-      payment_method, discount_amount = 0, amount_paid,
-      user_id
-    } = bookingData;
+  const conn = connection || pool;
 
-    const [result] = await conn.execute(
-      `INSERT INTO booking (payment_method, discount_amount, amount_paid, date_time, user_id)
-       VALUES (?, ?, ?, NOW(), ?)`,
-      [payment_method, discount_amount, amount_paid, user_id]
-    );
-    return result.insertId;
+  const {
+    customer_id,     // ✅ nhận từ controller
+    payment_method,
+    payment_status,  // ✅ để biết paid hay unpaid
+    total_cost,      // ✅ tổng tiền
+    discount_amount = 0
+  } = bookingData;
+
+  const amount_paid = payment_status === 'paid' ? total_cost : 0;
+
+  if (
+    customer_id == null ||
+    !payment_method ||
+    total_cost == null
+  ) {
+    throw new Error('Invalid booking data for Booking.create');
   }
+
+  const [result] = await conn.execute(
+    `INSERT INTO booking 
+      (payment_method, discount_amount, amount_paid, date_time, user_id)
+     VALUES (?, ?, ?, NOW(), ?)`,
+    [payment_method, discount_amount, amount_paid, customer_id]
+  );
+
+  return result.insertId;
+}
 
   static async findById(bookingId) {
     const [rows] = await pool.execute(
@@ -71,6 +87,37 @@ class Booking {
       tickets,
       combos
     };
+  }
+
+  static async addCombos(bookingId, combos, connection = null) {
+    const conn = connection || pool;
+
+    if (!bookingId || !Array.isArray(combos) || combos.length === 0) {
+      return;
+    }
+
+    // Lọc combos hợp lệ
+    const validCombos = combos.filter(
+      (c) => c && c.combo_id && Number(c.quantity) > 0
+    );
+
+    if (validCombos.length === 0) return;
+
+    // Tạo VALUES (?, ?, ?) nhiều dòng
+    const values = [];
+    const params = [];
+
+    validCombos.forEach((c) => {
+      values.push('(?, ?, ?)');
+      params.push(bookingId, c.combo_id, Number(c.quantity)); // map -> count
+    });
+
+    const sql = `
+      INSERT INTO bookingcombo (booking_id, combo_id, count)
+      VALUES ${values.join(',')}
+    `;
+
+    await conn.execute(sql, params);
   }
 
   //get bookings by user - for user profile page
@@ -186,6 +233,7 @@ class Ticket {
     );
     return rows;
   }
+  
 }
 
 module.exports = { Booking, Ticket };
