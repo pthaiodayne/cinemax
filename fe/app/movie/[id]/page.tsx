@@ -1,10 +1,10 @@
 import Navbar from "../../components/Navbar";
 import ReviewForm from "./ReviewForm";
-
+import Link from "next/link";
 
 async function getMovie(id: string) {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/movies/${id}`, {
-    next: { revalidate: 60 }
+    next: { revalidate: 60 },
   });
   const data = await res.json();
   return data.movie;
@@ -17,16 +17,30 @@ async function getReviews(id: string) {
 }
 
 export default async function MovieDetailPage({ params }: any) {
-  const movie = await getMovie(params.id);
-  const reviews = await getReviews(params.id);
+  const { id } = await params;
+
+  const movie = await getMovie(id);
+  const reviews = await getReviews(id);
 
   return (
     <div className="min-h-screen bg-[#0b0b0b] text-white">
       <Navbar />
 
+      {/* NÚT BACK VỀ HOMEPAGE */}
+      <div className="w-full bg-[#0b0b0b]">
+        <div className="max-w-6xl mx-auto px-10 pt-6">
+          <Link
+            href="/"   // 👈 trang Neon Racer của bạn
+            className="inline-flex items-center gap-2 text-sm text-gray-300 hover:text-white transition"
+          >
+            <span className="text-lg">←</span>
+            <span>Back to Home</span>
+          </Link>
+        </div>
+      </div>
+
       {/* HERO */}
-      <section className="relative w-full py-16 px-10 flex gap-10 bg-gradient-to-b from-black/70 to-black">
-        
+      <section className="relative w-full py-10 px-10 flex gap-10 bg-gradient-to-b from-black/70 to-black">
         <div className="w-[350px] h-[500px] rounded-xl overflow-hidden shadow-lg">
           <img
             src={movie.image_url}
@@ -44,7 +58,24 @@ export default async function MovieDetailPage({ params }: any) {
             <span>📅 {movie.release_date?.slice(0, 10)}</span>
           </div>
 
-          <p className="mt-6 text-lg text-gray-300">{movie.plot_description}</p>
+          <p className="mt-6 text-lg text-gray-300">
+            {movie.plot_description}
+          </p>
+
+          {/* NÚT CHOOSE SHOWTIME */}
+          <Link
+            href={{
+              pathname: "/chooseshowtime",
+              query: {
+                movieId: String(id),
+                movieTitle: movie.title,
+                moviePoster: movie.image_url,
+              },
+            }}
+            className="mt-8 inline-flex items-center justify-center px-10 py-4 bg-red-600 hover:bg-red-700 text-lg font-semibold rounded-xl shadow-lg shadow-red-800/40 transition"
+          >
+            Choose Showtime
+          </Link>
         </div>
       </section>
 
@@ -54,7 +85,7 @@ export default async function MovieDetailPage({ params }: any) {
 
         <div className="flex flex-col gap-5 mb-10">
           {reviews.map((rev: any, idx: number) => (
-            <div 
+            <div
               key={idx}
               className="bg-[#111] p-6 rounded-xl border border-white/10"
             >
@@ -67,7 +98,6 @@ export default async function MovieDetailPage({ params }: any) {
           ))}
         </div>
 
-        {/* Form */}
         <ReviewForm movieId={params.id} />
       </section>
     </div>
