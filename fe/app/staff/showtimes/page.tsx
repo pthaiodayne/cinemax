@@ -219,6 +219,15 @@ const ShowtimesPage: React.FC = () => {
             </span>
             <span>Customers</span>
           </Link>
+          <Link
+            href="/staff/combos"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              🍿
+            </span>
+            <span>Combos</span>
+          </Link>
         </nav>
       </div>
 
@@ -250,7 +259,7 @@ const ShowtimesPage: React.FC = () => {
           </thead>
           <tbody>
             {showtimes.map((showtime) => (
-              <tr key={showtime.id} className="border-b border-gray-700">
+              <tr key={`${showtime.id}-${showtime.movie_id}-${showtime.date}`} className="border-b border-gray-700">
                 <td className="py-3 px-4 text-white">{showtime.movie_title}</td>
                 <td className="py-3 px-4">{showtime.theater_name}</td>
                 <td className="py-3 px-4">
@@ -258,16 +267,10 @@ const ShowtimesPage: React.FC = () => {
                 </td>
                 <td className="py-3 px-4">{showtime.format}</td>
                 <td className="py-3 px-4">
-                  <button
-                    onClick={() => handleEdit(showtime.id)}
-                    className="text-yellow-400 mr-4"
-                  >
+                  <button onClick={() => handleEdit(showtime.id)} className="text-yellow-400 mr-4">
                     Edit
                   </button>
-                  <button
-                    onClick={() => handleDelete(showtime.id)}
-                    className="text-red-600"
-                  >
+                  <button onClick={() => handleDelete(showtime.id)} className="text-red-600">
                     Delete
                   </button>
                 </td>
