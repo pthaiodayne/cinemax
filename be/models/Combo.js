@@ -4,12 +4,13 @@ class Combo {
   static async create(comboData) {
     const { name, price, image_url, combo_id } = comboData;
 
+    //insert combo
     const [result] = await pool.execute(
       'INSERT INTO combo (combo_id, name, price, image_url) VALUES (?, ?, ?, ?)',
       [combo_id || null, name, price, image_url]
     );
     
-    // Get the generated combo_id if not provided
+    //get the generated combo_id if not provided
     if (!combo_id) {
       const [rows] = await pool.execute('SELECT LAST_INSERT_ID() as id');
       return rows[0].id;

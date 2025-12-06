@@ -23,13 +23,13 @@ const bookingValidation = [
 ];
 
 // User routes (requires authentication)
-router.get('/my-bookings', auth, bookingController.getMyBookings);
-router.get('/:id', auth, bookingController.getBookingById);
-router.post('/', auth, bookingValidation, validate, bookingController.createBooking);
-router.put('/:id/payment', auth, bookingController.updatePaymentStatus);
-router.delete('/:id', auth, bookingController.cancelBooking);
+router.post('/', auth, bookingValidation, validate, bookingController.createBooking); //POST /api/bookings
+router.get('/my-bookings', auth, bookingController.getMyBookings); //GET /api/bookings/my-bookings
+router.get('/:id', auth, bookingController.getBookingById); //GET /api/bookings/:id
+router.put('/:id/payment', auth, bookingController.updatePaymentStatus); //PUT /api/bookings/:id/payment
+router.delete('/:id', auth, bookingController.cancelBooking); //DELETE /api/bookings/:id
 
 // Staff routes
-router.get('/', auth, isStaff, bookingController.getAllBookings);
+router.get('/', auth, isStaff, bookingController.getAllBookings); //GET /api/bookings
 
 module.exports = router;

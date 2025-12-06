@@ -17,14 +17,14 @@ const showtimeValidation = [
 ];
 
 // Public routes
-router.get('/', showtimeController.getAllShowtimes);
-router.get('/movie/:movieId', showtimeController.getShowtimesByMovie);
-router.get('/theaters', showtimeController.getAllTheaters);
-router.get('/:id', showtimeController.getShowtimeById);
+router.get('/', showtimeController.getAllShowtimes); //GET /api/showtimes
+router.get('/movie/:movieId', showtimeController.getShowtimesByMovie); //GET /api/showtimes/movie/:movieId
+router.get('/theaters', showtimeController.getAllTheaters); //GET /api/showtimes/theaters
+router.get('/:id', showtimeController.getShowtimeById); //GET /api/showtimes/:id
 
 // Staff routes
-router.post('/', auth, isStaff, showtimeValidation, validate, showtimeController.createShowtime);
-router.put('/:id', auth, isStaff, showtimeController.updateShowtime);
-router.delete('/:id', auth, isStaff, showtimeController.deleteShowtime);
+router.post('/', auth, isStaff, showtimeValidation, validate, showtimeController.createShowtime); //POST /api/showtimes
+router.put('/:id', auth, isStaff, showtimeValidation, validate, showtimeController.updateShowtime); //PUT /api/showtimes/:id
+router.delete('/:id', auth, isStaff, showtimeController.deleteShowtime); //DELETE /api/showtimes/:id
 
 module.exports = router;

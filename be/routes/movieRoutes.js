@@ -19,13 +19,13 @@ const movieValidation = [
 ];
 
 // Public routes
-router.get('/', movieController.getAllMovies);
-router.get('/ongoing', movieController.getOngoing);
-router.get('/:id', movieController.getMovieById);
+router.get('/', movieController.getAllMovies); //GET /api/movies
+router.get('/ongoing', movieController.getOngoing); //GET /api/movies/ongoing
+router.get('/:id', movieController.getMovieById); //GET /api/movies/:id
 
 // Staff routes
-router.post('/', auth, isStaff, movieValidation, validate, movieController.createMovie);
-router.put('/:id', auth, isStaff, movieValidation, validate, movieController.updateMovie);
-router.delete('/:id', auth, isStaff, movieController.deleteMovie);
+router.post('/', auth, isStaff, movieValidation, validate, movieController.createMovie); //POST /api/movies
+router.put('/:id', auth, isStaff, movieValidation, validate, movieController.updateMovie); //PUT /api/movies/:id
+router.delete('/:id', auth, isStaff, movieController.deleteMovie); //DELETE /api/movies/:id
 
 module.exports = router;

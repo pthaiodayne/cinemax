@@ -28,9 +28,9 @@ const updateProfileValidation = [
 ];
 
 // Routes
-router.post('/register', registerValidation, validate, authController.register);
-router.post('/login', loginValidation, validate, authController.login);
-router.get('/profile', auth, authController.getProfile);
-router.put('/profile', auth, updateProfileValidation, validate, authController.updateProfile);
+router.post('/register', registerValidation, validate, authController.register); //LINK: /api/auth/register
+router.post('/login', loginValidation, validate, authController.login); //LINK: /api/auth/login
+router.get('/profile', auth, authController.getProfile); //LINK: /api/auth/profile
+router.put('/profile', auth, updateProfileValidation, validate, authController.updateProfile); //LINK: /api/auth/profile
 
 module.exports = router;

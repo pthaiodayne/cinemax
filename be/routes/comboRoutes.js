@@ -16,13 +16,13 @@ const comboValidation = [
 ];
 
 // Public routes
-router.get('/', comboController.getAllCombos);
-router.get('/:id', comboController.getComboById);
+router.get('/', comboController.getAllCombos); //GET /api/combos
+router.get('/:id', comboController.getComboById); //GET /api/combos/:id
 
 // Staff routes
-router.post('/', auth, isStaff, comboValidation, validate, comboController.createCombo);
-router.put('/:id', auth, isStaff, comboValidation, validate, comboController.updateCombo);
-router.delete('/:id', auth, isStaff, comboController.deleteCombo);
-router.patch('/:id/toggle', auth, isStaff, comboController.toggleAvailability);
+router.post('/', auth, isStaff, comboValidation, validate, comboController.createCombo); //POST /api/combos
+router.put('/:id', auth, isStaff, comboValidation, validate, comboController.updateCombo); //PUT /api/combos/:id
+router.delete('/:id', auth, isStaff, comboController.deleteCombo); //DELETE /api/combos/:id
+router.patch('/:id/toggle', auth, isStaff, comboController.toggleAvailability); //PATCH /api/combos/:id/toggle
 
 module.exports = router;

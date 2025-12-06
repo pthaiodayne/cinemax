@@ -26,25 +26,26 @@ class Movie {
       [movieId]
     );
     
+    //get genres, formats, crew
     if (rows[0]) {
-      // Get genres
+      //get genres
       const [genres] = await pool.execute(
         'SELECT genre_type FROM genre WHERE movie_id = ?',
         [movieId]
       );
       rows[0].genres = genres.map(g => g.genre_type);
 
-      // Get formats
+      //get formats
       const [formats] = await pool.execute(
         'SELECT format_type FROM format WHERE movie_id = ?',
         [movieId]
       );
       rows[0].formats = formats.map(f => f.format_type);
 
-      // Get crew
+      //get crew
       const [crew] = await pool.execute(
         `SELECT c.person_id, c.person_name, c.image_url, p.role
-         FROM Participate p
+         FROM participate p
          JOIN crew c ON p.person_id = c.person_id
          WHERE p.movie_id = ?`,
         [movieId]
@@ -57,7 +58,7 @@ class Movie {
 
   static async getAll(filters = {}) {
     let query = `
-      SELECT DISTINCT m.*, s.name as created_by_name
+      SELECT m.*, s.name as created_by_name
       FROM movie m
       LEFT JOIN staff s ON m.user_id = s.user_id
       WHERE 1=1
@@ -81,7 +82,7 @@ class Movie {
       params.push(`%${filters.search}%`, `%${filters.search}%`);
     }
 
-    query += ' ORDER BY m.release_date DESC';
+    query += ' GROUP BY m.movie_id ORDER BY m.release_date DESC';
 
     const [rows] = await pool.execute(query, params);
     return rows;

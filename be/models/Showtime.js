@@ -18,9 +18,9 @@ class Showtime {
   static async findById(theater_id, screen_number, start_time, end_time, date) {
     const [rows] = await pool.execute(
       `SELECT s.*, m.title, m.duration, m.image_url as movie_image,
-              t.name as theater_name, t.location, t.district,
-              a.formats as auditorium_format,
-              st.name as staff_name
+            t.name as theater_name, t.location, t.district,
+            a.formats as auditorium_format,
+            st.name as staff_name
        FROM showtime s
        JOIN movie m ON s.movie_id = m.movie_id
        JOIN theater t ON s.theater_id = t.theater_id
@@ -35,7 +35,7 @@ class Showtime {
   static async getByMovie(movieId, filters = {}) {
     let query = `
       SELECT s.*, t.name as theater_name, t.location, t.district,
-             a.formats as auditorium_format
+            a.formats as auditorium_format
       FROM showtime s
       JOIN theater t ON s.theater_id = t.theater_id
       JOIN auditorium a ON s.theater_id = a.theater_id AND s.screen_number = a.screen_number
@@ -64,7 +64,7 @@ class Showtime {
   static async getAll(filters = {}) {
     let query = `
       SELECT s.*, m.title, m.image_url as movie_image,
-             t.name as theater_name, t.location
+            t.name as theater_name, t.location
       FROM showtime s
       JOIN movie m ON s.movie_id = m.movie_id
       JOIN theater t ON s.theater_id = t.theater_id
@@ -123,8 +123,9 @@ class Showtime {
     return result.affectedRows > 0;
   }
 
+  //count available seats for showtime
   static async getAvailableSeats(theater_id, screen_number, start_time, end_time, date) {
-    // Get total seats in auditorium
+    //get total seats in auditorium
     const [auditorium] = await pool.execute(
       'SELECT seat_capacity FROM auditorium WHERE theater_id = ? AND screen_number = ?',
       [theater_id, screen_number]
@@ -132,7 +133,7 @@ class Showtime {
 
     if (!auditorium[0]) return 0;
 
-    // Get booked seats count
+    //get booked seats count
     const [booked] = await pool.execute(
       `SELECT COUNT(*) as booked_count
        FROM ticket

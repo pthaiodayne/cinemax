@@ -51,6 +51,7 @@ class Seat {
     return rows;
   }
 
+  //check specific seats availability for showtime
   static async checkAvailability(seatNumbers, theater_id, screen_number, start_time, end_time, date) {
     if (!seatNumbers || seatNumbers.length === 0) return true;
 
