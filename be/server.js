@@ -13,6 +13,7 @@ const showtimeRoutes = require('./routes/showtimeRoutes');
 const seatRoutes = require('./routes/seatRoutes');
 const bookingRoutes = require('./routes/bookingRoutes');
 const comboRoutes = require('./routes/comboRoutes');
+const reviewRoutes = require('./routes/reviewRoutes');
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -49,6 +50,7 @@ app.use('/api/showtimes', showtimeRoutes);
 app.use('/api/seats', seatRoutes);
 app.use('/api/bookings', bookingRoutes);
 app.use('/api/combos', comboRoutes);
+app.use('/api/reviews', reviewRoutes);
 
 // Error handling
 app.use(notFound);

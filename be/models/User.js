@@ -74,7 +74,7 @@ class Staff {
   static async findById(userId) {
     const [rows] = await pool.execute(
       `SELECT s.user_id, s.email, s.name, s.phone, s.dob, s.gender, s.role, 
-              s.theater_id, s.manager_id, s.last_active, t.name as theater_name
+            s.theater_id, s.manager_id, s.last_active, t.name as theater_name
        FROM staff s
        LEFT JOIN theater t ON s.theater_id = t.theater_id
        WHERE s.user_id = ?`,
@@ -130,17 +130,17 @@ class Staff {
   }
 }
 
-// Universal user finder (searches both Customer and Staff)
+//universal user finder (searches both Customer and Staff)
 class User {
   static async findByEmail(email) {
-    // Try Customer first
+    //try Customer first
     let user = await Customer.findByEmail(email);
     if (user) {
       user.userType = 'customer';
       return user;
     }
     
-    // Try Staff
+    //try Staff
     user = await Staff.findByEmail(email);
     if (user) {
       user.userType = 'staff';

@@ -76,4 +76,12 @@ PATCH /api/combos/:id
 GET  /api/seats/auditorium
 GET  /api/seats/booked
 
-'''
+// Reviews
+GET  /api/reviews/movie/:movieId
+
+POST  /api/reviews
+GET   /api/reviews/my-reviews
+PUT  /api/reviews/:movieId/:ratingId
+DELETE /api/reviews/:movieId/:ratingId
+
+```
