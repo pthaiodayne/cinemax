@@ -19,10 +19,14 @@ class Movie {
 
   static async findById(movieId) {
     const [rows] = await pool.execute(
-      `SELECT m.*, s.name as created_by_name
+      `SELECT m.*, s.name as created_by_name,
+              COALESCE(AVG(r.stars), 0) as rating,
+              COUNT(r.rating_id) as review_count
        FROM movie m
        LEFT JOIN staff s ON m.user_id = s.user_id
-       WHERE m.movie_id = ?`,
+       LEFT JOIN review r ON m.movie_id = r.movie_id
+       WHERE m.movie_id = ?
+       GROUP BY m.movie_id`,
       [movieId]
     );
     
@@ -59,9 +63,12 @@ class Movie {
 
   static async getAll(filters = {}) {
     let query = `
-      SELECT m.*, s.name as created_by_name
+      SELECT m.*, s.name as created_by_name,
+             COALESCE(AVG(r.stars), 0) as rating,
+             COUNT(r.rating_id) as review_count
       FROM movie m
       LEFT JOIN staff s ON m.user_id = s.user_id
+      LEFT JOIN review r ON m.movie_id = r.movie_id
       WHERE 1=1
     `;
     const params = [];

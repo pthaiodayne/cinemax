@@ -8,7 +8,7 @@ export default function BookingCard({ booking }: any) {
   }
 
   return (
-    <Link href={`/tickets/${booking.booking_id}`}>
+    <Link href={`/ticket/${booking.booking_id}`}>
       <div className="bg-[#111] p-5 rounded-xl border border-white/10 hover:border-red-500 transition cursor-pointer">
         <div className="flex justify-between mb-2">
           <b>Booking #{booking.booking_id}</b>

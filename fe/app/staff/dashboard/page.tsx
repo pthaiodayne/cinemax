@@ -64,8 +64,14 @@ const StaffDashboard: React.FC = () => {
   const [bookings, setBookings] = useState<BookingFromApi[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const [movies, setMovies] = useState<Movie[]>([]);
+
+  // Prevent hydration mismatch
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch bookings from backend
   useEffect(() => {
@@ -354,7 +360,7 @@ const StaffDashboard: React.FC = () => {
                       {b.customer_name} • {b.ticket_count} tickets
                     </div>
                     <div className="text-[11px] text-gray-500">
-                      {new Date(b.date_time).toLocaleString('vi-VN')}
+                      {mounted ? new Date(b.date_time).toLocaleString('vi-VN') : b.date_time.slice(0, 10)}
                     </div>
                   </div>
                   <div className="text-right">

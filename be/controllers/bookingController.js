@@ -68,8 +68,11 @@ exports.createBooking = async (req, res, next) => {
       payment_status = 'unpaid'
     } = req.body;
 
+    console.log('Creating booking with showtime:', { theater_id, screen_number, start_time, end_time, date });
+
     //validate showtime
     const showtime = await Showtime.findById(theater_id, screen_number, start_time, end_time, date);
+    console.log('Showtime found:', showtime);
     if (!showtime) {
       await connection.rollback();
       console.log('Showtime not found for booking creation');

@@ -1,6 +1,7 @@
 import MovieCard from "./components/MovieCard";
 import SectionTitle from "./components/SectionTitle";
 import Navbar from "./components/Navbar";
+import Link from "next/link";
 
 async function getMovies() {
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/movies`, {
@@ -42,7 +43,7 @@ export default async function HomePage() {
 
           {/* Info */}
           <div className="flex items-center gap-6 mt-5 text-gray-300 text-lg">
-            <span>⭐ {featured.rating || 8.8}</span>
+            <span>⭐ {Number(featured.rating) > 0 ? Number(featured.rating).toFixed(1) : "N/A"}</span>
             <span>⏱ {featured.duration}m</span>
             <span>📅 {featured.release_date?.slice(0, 10)}</span>
           </div>
@@ -64,9 +65,9 @@ export default async function HomePage() {
 
           {/* CTA */}
           <div className="flex gap-4 mt-8">
-            <button className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-800 rounded-lg font-semibold hover:opacity-90 transition">
+            <Link href={`/movie/${featured.movie_id}`} className="px-6 py-3 bg-gradient-to-r from-red-600 to-red-800 rounded-lg font-semibold hover:opacity-90 transition inline-block text-center">
               Book Tickets
-            </button>
+            </Link>
             <button className="px-6 py-3 border border-gray-400 rounded-lg hover:bg-gray-700 transition">
               ▶ Watch Trailer
             </button>
