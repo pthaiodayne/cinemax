@@ -35,6 +35,8 @@ const ShowtimePage: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [theaters, setTheaters] = useState<Theater[]>([]);
   const [showtimes, setShowtimes] = useState<Showtime[]>([]);
+  const [screens, setScreens] = useState<{ screen_number: number; formats: string }[]>([]);
+  const [editingShowtime, setEditingShowtime] = useState<Showtime | null>(null);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [userName, setUserName] = useState('Staff');
   const [userRole, setUserRole] = useState('staff');
@@ -45,7 +47,6 @@ const ShowtimePage: React.FC = () => {
     date: '',
     start_time: '',
     format: '2D', // vẫn giữ nếu sau này backend join từ Auditorium
-    price: 0,
   });
   const [filters, setFilters] = useState({
       movie_id: '',
@@ -116,7 +117,7 @@ const ShowtimePage: React.FC = () => {
       if (!res.ok) throw new Error('Failed to fetch showtimes');
 
       const data = await res.json();
-      setShowtimes(data.showtimes);
+      setShowtimes(Array.isArray(data.showtimes) ? data.showtimes.filter(Boolean) : []);
     } catch (err) {
       console.error(err);
     }
@@ -160,41 +161,66 @@ const handleSubmit = async (e: React.FormEvent) => {
     let start_time = newShowtime.start_time;
     if (start_time.length === 5) start_time += ':00';
 
-    const [h, m, s] = start_time.split(':').map(Number);
-    const d = new Date();
-    d.setHours(h, m, s || 0);
-    d.setMinutes(d.getMinutes() + 120);
-
-    const end_time = d.toTimeString().slice(0, 8);
-
     const payload = {
       movie_id: Number(newShowtime.movie_id),
       theater_id: Number(newShowtime.theater_id),
       screen_number: Number(newShowtime.screen_number),
       date: newShowtime.date,
       start_time,
-      end_time,
-      format: newShowtime.format,
-      price: Number(newShowtime.price),
+      end_time: editingShowtime?.end_time || start_time // keep old end_time
     };
 
-    const res = await fetch(`${API_BASE}/showtimes`, {
-      method: 'POST',
+    let url = `${API_BASE}/showtimes`;
+    let method: 'POST' | 'PUT' = 'POST';
+
+    // ✅ IF EDIT MODE
+    if (editingShowtime) {
+      const params = new URLSearchParams({
+        theater_id: String(editingShowtime.theater_id),
+        screen_number: String(editingShowtime.screen_number),
+        start_time: editingShowtime.start_time,
+        end_time: editingShowtime.end_time,
+        date: editingShowtime.date
+      });
+
+      url = `${API_BASE}/showtimes?${params.toString()}`;
+      method = 'PUT';
+    }
+
+    const res = await fetch(url, {
+      method,
       headers: {
         'Content-Type': 'application/json',
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${token}`
       },
-      body: JSON.stringify(payload),
+      body: JSON.stringify(payload)
     });
 
     if (!res.ok) {
-      const errorText = await res.text();
-      console.error('Failed to add showtime:', errorText);
-      throw new Error(errorText);
+      const text = await res.text();
+      throw new Error(text);
     }
 
     const data = await res.json();
-    setShowtimes((prev) => [...prev, data.showtime]);
+
+    // ✅ UPDATE UI
+    if (editingShowtime) {
+      setShowtimes(prev =>
+        prev.map(s =>
+          s.theater_id === editingShowtime.theater_id &&
+          s.screen_number === editingShowtime.screen_number &&
+          s.start_time === editingShowtime.start_time &&
+          s.end_time === editingShowtime.end_time &&
+          s.date === editingShowtime.date
+            ? data.showtime
+            : s
+        )
+      );
+    } else {
+      setShowtimes(prev => [...prev, data.showtime]);
+    }
+
+    setEditingShowtime(null);
     closeModal();
   } catch (err) {
     console.error(err);
@@ -202,46 +228,62 @@ const handleSubmit = async (e: React.FormEvent) => {
 };
 
 
+
+
   // Delete showtime theo composite key backend đang dùng
-  const handleDelete = async (showtime: Showtime) => {
-    try {
-      const params = new URLSearchParams({
-        theater_id: String(showtime.theater_id),
-        screen_number: String(showtime.screen_number),
-        start_time: showtime.start_time,
-        end_time: showtime.end_time,
-        date: showtime.date,
-      });
+const handleDelete = async (showtime: Showtime) => {
+  try {
+    const token = localStorage.getItem('token');
 
-      const res = await fetch(
-        `${API_BASE}/showtimes?${params.toString()}`,
-        {
-          method: 'DELETE',
-        }
-      );
-
-      if (!res.ok) {
-        const errorText = await res.text();
-        console.error('Failed to delete showtime:', errorText);
-        throw new Error('Failed to delete showtime');
-      }
-
-      setShowtimes((prev) =>
-        prev.filter(
-          (s) =>
-            !(
-              s.theater_id === showtime.theater_id &&
-              s.screen_number === showtime.screen_number &&
-              s.start_time === showtime.start_time &&
-              s.end_time === showtime.end_time &&
-              s.date === showtime.date
-            )
-        )
-      );
-    } catch (err: any) {
-      console.error(err);
+    if (!token) {
+      alert('You are not logged in');
+      return;
     }
-  };
+
+    const params = new URLSearchParams({
+      theater_id: String(showtime.theater_id),
+      screen_number: String(showtime.screen_number),
+      start_time: showtime.start_time,
+      end_time: showtime.end_time,
+      date: showtime.date,
+    });
+
+    const res = await fetch(
+      `${API_BASE}/showtimes?${params.toString()}`,
+      {
+        method: 'DELETE',
+        headers: {
+          Authorization: `Bearer ${token}`
+        },
+      }
+    );
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      console.error('Failed to delete showtime:', errorText);
+      throw new Error(errorText);
+    }
+
+    setShowtimes((prev) =>
+      prev.filter(
+        (s) =>
+          !(
+            s.theater_id === showtime.theater_id &&
+            s.screen_number === showtime.screen_number &&
+            s.start_time === showtime.start_time &&
+            s.end_time === showtime.end_time &&
+            s.date === showtime.date
+          )
+      )
+    );
+  } catch (err) {
+    console.error(err);
+  }
+};
+
+
+
+
 
   return (
     <div className="flex min-h-screen bg-[#050505] text-white">
@@ -437,10 +479,13 @@ const handleSubmit = async (e: React.FormEvent) => {
               </tr>
             </thead>
             <tbody>
-              {showtimes.map((showtime, index) => {
-                const movie = movies.find(
-                  (movie) => movie.movie_id === showtime.movie_id
-                );
+              {showtimes
+                .filter((s) => s && s.movie_id) // ✅ REMOVE undefined/null rows
+                .map((showtime, index) => {
+                  const movie = movies.find(
+                    (m) => m.movie_id === showtime.movie_id
+                  );
+
                 return (
                   <tr
                     key={
@@ -490,11 +535,32 @@ const handleSubmit = async (e: React.FormEvent) => {
                         </>
                       )}
                       <button
+                        onClick={() => {
+                          setEditingShowtime(showtime);
+
+                          setNewShowtime({
+                            movie_id: String(showtime.movie_id),
+                            theater_id: String(showtime.theater_id),
+                            screen_number: String(showtime.screen_number),
+                            date: showtime.date,
+                            start_time: showtime.start_time.slice(0, 5),
+                            format: showtime.format || '2D'
+                          });
+
+                          setIsModalOpen(true); // ✅ open SAME modal
+                        }}
+                        className="text-blue-500 hover:text-blue-300 mr-3"
+                      >
+                        Edit
+                      </button>
+
+                      <button
                         onClick={() => handleDelete(showtime)}
                         className="text-red-500 hover:text-red-300"
                       >
                         Delete
                       </button>
+
                     </td>
                   </tr>
                 );
@@ -508,7 +574,9 @@ const handleSubmit = async (e: React.FormEvent) => {
       {isModalOpen && (
         <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
           <div className="bg-[#111] p-6 rounded-lg max-w-md w-full">
-            <h2 className="text-2xl font-semibold mb-4">Add New Showtime</h2>
+            <h2 className="text-2xl font-semibold mb-4">
+              {editingShowtime ? 'Edit Showtime' : 'Add New Showtime'}
+            </h2>
             <form onSubmit={handleSubmit}>
               <div className="mb-4">
                 <label className="block text-sm text-gray-400">Movie</label>
@@ -529,39 +597,76 @@ const handleSubmit = async (e: React.FormEvent) => {
               </div>
 
               <div className="mb-4">
-                <label className="block text-sm text-gray-400">Theater</label>
-                <select
-                  name="theater_id"
-                  value={newShowtime.theater_id}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
-                  required
-                >
-                  <option value="">Select theater</option>
-                  {theaters.map((theater) => (
-                    <option
-                      key={theater.theater_id}
-                      value={theater.theater_id}
+                    <label className="block text-sm text-gray-400">Theater</label>
+                    <select
+                      name="theater_id"
+                      value={newShowtime.theater_id}
+                      onChange={async (e) => {
+                        handleChange(e);
+
+                        const theaterId = e.target.value;
+                        if (!theaterId) {
+                          setScreens([]);
+                          return;
+                        }
+
+                        const res = await fetch(
+                          `${API_BASE}/showtimes/theaters/${theaterId}/screens`
+                        );
+                        const data = await res.json();
+
+                        setScreens(data.screens || []);
+
+                        // reset screen when theater changes
+                        setNewShowtime(prev => ({
+                          ...prev,
+                          screen_number: '',
+                        }));
+                      }}
+                      className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
+                      required
                     >
-                      {theater.name}
-                    </option>
-                  ))}
-                </select>
-              </div>
+                      <option value="">Select theater</option>
+                      {theaters.map((theater) => (
+                        <option key={theater.theater_id} value={theater.theater_id}>
+                          {theater.name}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
 
               <div className="mb-4">
                 <label className="block text-sm text-gray-400">
                   Screen Number
                 </label>
-                <input
-                  type="number"
+                <select
                   name="screen_number"
                   value={newShowtime.screen_number}
-                  onChange={handleChange}
+                  onChange={(e) => {
+                    const selectedScreen = screens.find(
+                      s => String(s.screen_number) === e.target.value
+                    );
+
+                    setNewShowtime(prev => ({
+                      ...prev,
+                      screen_number: e.target.value,
+                      format: selectedScreen?.formats || '2D' // ✅ AUTO SET FORMAT
+                    }));
+                  }}
                   className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
                   required
-                  min={1}
-                />
+                  disabled={!screens.length}
+                >
+                  <option value="">Select screen</option>
+                  {screens.map(screen => (
+                    <option key={screen.screen_number} value={screen.screen_number}>
+                      Screen {screen.screen_number} ({screen.formats})
+                    </option>
+                  ))}
+                </select>
+
+
               </div>
 
               <div className="mb-4">
@@ -588,35 +693,6 @@ const handleSubmit = async (e: React.FormEvent) => {
                 />
               </div>
 
-              <div className="mb-4">
-                <label className="block text-sm text-gray-400">Format</label>
-                <select
-                  name="format"
-                  value={newShowtime.format}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
-                >
-                  <option value="2D">2D</option>
-                  <option value="3D">3D</option>
-                  <option value="IMAX">IMAX</option>
-                </select>
-              </div>
-
-              <div className="mb-4">
-                <label className="block text-sm text-gray-400">
-                  Price (VND)
-                </label>
-                <input
-                  type="number"
-                  name="price"
-                  value={newShowtime.price}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
-                  required
-                  min={0}
-                />
-              </div>
-
               <div className="flex justify-between items-center">
                 <button
                   type="button"
@@ -629,7 +705,7 @@ const handleSubmit = async (e: React.FormEvent) => {
                   type="submit"
                   className="bg-red-600 text-white px-4 py-2 rounded-lg text-lg"
                 >
-                  Add Showtime
+                    {editingShowtime ? 'Update Showtime' : 'Add Showtime'}
                 </button>
               </div>
             </form>

@@ -103,13 +103,15 @@ const CombosPage: React.FC = () => {
   };
 
   // Handle form input change
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    setNewComboData({
-      ...newComboData,
-      [name]: value,
-    });
-  };
+const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const { name, value } = e.target;
+
+  setNewComboData({
+    ...newComboData,
+    [name]: name === 'price' ? Number(value) : value,
+  });
+};
+
 
   // Handle edit combo
   const handleEditCombo = (combo: Combo) => {
@@ -120,47 +122,46 @@ const CombosPage: React.FC = () => {
   };
 
   // Handle save/submit combo
-  const handleSubmitCombo = async () => {
-    const method = isEditing ? 'PUT' : 'POST';
-    const url = isEditing ? `${API_BASE}/combos/${currentComboId}` : `${API_BASE}/combos`;
+const handleSubmitCombo = async () => {
+  const method = isEditing ? 'PUT' : 'POST';
+  const url = isEditing
+    ? `${API_BASE}/combos/${currentComboId}`
+    : `${API_BASE}/combos`;
 
-    // Prepare data - remove combo_id for new combos (backend trigger will generate it)
-    const dataToSend = isEditing ? newComboData : {
-      name: newComboData.name,
-      price: newComboData.price,
-      image_url: newComboData.image_url,
-    };
-
-    try {
-      const res = await fetch(url, {
-        method: method,
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(dataToSend),
-      });
-
-      if (!res.ok) {
-        throw new Error(isEditing ? 'Failed to update combo' : 'Failed to add new combo');
-      }
-
-      const data = await res.json();
-      console.log(isEditing ? 'Combo updated' : 'New combo added', data.combo);
-      
-      // Refresh the combos list
-      const refreshRes = await fetch(`${API_BASE}/combos`, {
-        credentials: 'include',
-      });
-      if (refreshRes.ok) {
-        const refreshData = await refreshRes.json();
-        setCombos(refreshData.combos || []);
-      }
-      
-      toggleModal();  // Close the modal after adding/updating combo
-    } catch (err) {
-      console.error('Error:', err);
-    }
+  const dataToSend = {
+    name: newComboData.name,
+    price: newComboData.price,
+    image_url: newComboData.image_url,
   };
+
+  try {
+    const res = await fetch(url, {
+      method,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      credentials: 'include',
+      body: JSON.stringify(dataToSend),
+    });
+
+    if (!res.ok) {
+      throw new Error(isEditing ? 'Failed to update combo' : 'Failed to add new combo');
+    }
+
+    const refreshRes = await fetch(`${API_BASE}/combos`, {
+      credentials: 'include',
+    });
+
+    if (refreshRes.ok) {
+      const refreshData = await refreshRes.json();
+      setCombos(refreshData.combos || []);
+    }
+
+    toggleModal();
+  } catch (err) {
+    console.error('Error:', err);
+  }
+};
 
   return (
     <div className="flex min-h-screen bg-[#050505] text-white">

@@ -1,5 +1,6 @@
 const Showtime = require('../models/Showtime');
 const { Theater, Auditorium } = require('../models/Theater');
+const { pool } = require('../db/connection');
 
 //get all showtimes
 exports.getAllShowtimes = async (req, res, next) => {
@@ -18,6 +19,31 @@ exports.getAllShowtimes = async (req, res, next) => {
     next(error);
   }
 };
+
+// ✅ get all screens for a theater
+exports.getScreensByTheater = async (req, res, next) => {
+  try {
+    const { theater_id } = req.params;
+
+    const [rows] = await pool.execute(
+      `
+      SELECT screen_number, formats
+      FROM auditorium
+      WHERE theater_id = ?
+      ORDER BY screen_number
+      `,
+      [theater_id]
+    );
+
+    res.json({
+      count: rows.length,
+      screens: rows,
+    });
+  } catch (err) {
+    next(err);
+  }
+};
+
 
 //get showtimes by movie
 exports.getShowtimesByMovie = async (req, res, next) => {

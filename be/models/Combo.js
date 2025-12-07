@@ -2,21 +2,17 @@ const { pool } = require('../db/connection');
 
 class Combo {
   static async create(comboData) {
-    const { name, price, image_url, combo_id } = comboData;
+  const { name, price, image_url } = comboData;
 
-    //insert combo
-    const [result] = await pool.execute(
-      'INSERT INTO combo (combo_id, name, price, image_url) VALUES (?, ?, ?, ?)',
-      [combo_id || null, name, price, image_url]
-    );
-    
-    //get the generated combo_id if not provided
-    if (!combo_id) {
-      const [rows] = await pool.execute('SELECT LAST_INSERT_ID() as id');
-      return rows[0].id;
-    }
-    return combo_id;
-  }
+  const [result] = await pool.execute(
+    'INSERT INTO combo (name, price, image_url) VALUES (?, ?, ?)',
+    [name, price, image_url]
+  );
+
+  // Lấy combo vừa tạo theo id tự sinh
+  return result.insertId;
+}
+
 
   static async findById(comboId) {
     const [rows] = await pool.execute(
