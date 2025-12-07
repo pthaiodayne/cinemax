@@ -123,8 +123,9 @@ const CheckoutPage: React.FC = () => {
     alert('Booking created successfully!');
     console.log('BOOKING RESULT:', data.booking);
 
-    // ✅ Điều hướng sang trang booking detail (nếu có)
-    window.location.href = `/my-bookings`;
+    // ✅ Điều hướng sang trang booking detail
+    window.location.href = `/tickets`;
+    //window.location.href = `/my-bookings`;
   } catch (err) {
     console.error('BOOKING ERROR:', err);
     alert('Network error when creating booking');
