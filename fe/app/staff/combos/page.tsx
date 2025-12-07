@@ -22,6 +22,8 @@ const CombosPage: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
   const [isEditing, setIsEditing] = useState<boolean>(false);
   const [currentComboId, setCurrentComboId] = useState<string | null>(null);
+  const [userName, setUserName] = useState('Staff');
+  const [userRole, setUserRole] = useState('staff');
   const [newComboData, setNewComboData] = useState<Combo>({
     combo_id: '',
     name: '',
@@ -29,6 +31,20 @@ const CombosPage: React.FC = () => {
     image_url: '',
     available: true,
   });
+
+  // Load user info from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserName(user.name || 'Staff');
+        setUserRole(user.role || 'staff');
+      } catch (e) {
+        console.error('Failed to parse user:', e);
+      }
+    }
+  }, []);
 
   // Fetch combos from backend
   useEffect(() => {
@@ -152,11 +168,11 @@ const CombosPage: React.FC = () => {
       <aside className="fixed left-0 top-0 h-screen w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
         <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
           <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
-            CA
+            {userName.substring(0, 2).toUpperCase()}
           </div>
           <div>
-            <div className="text-lg font-semibold leading-none">CineAdmin</div>
-            <div className="text-xs text-gray-400 mt-1">Staff Panel</div>
+            <div className="text-lg font-semibold leading-none">{userName}</div>
+            <div className="text-xs text-gray-400 mt-1 capitalize">{userRole}</div>
           </div>
         </div>
 

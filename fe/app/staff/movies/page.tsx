@@ -31,6 +31,8 @@ const FORMAT_OPTIONS = ['2D', '3D', 'IMAX', '4D'];
 const MoviesPage: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userName, setUserName] = useState('Staff');
+  const [userRole, setUserRole] = useState('staff');
 
   const [newMovie, setNewMovie] = useState({
     title: '',
@@ -44,6 +46,20 @@ const MoviesPage: React.FC = () => {
     image_url: '',
   });
 
+
+  /* ===================== LOAD USER INFO ===================== */
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserName(user.name || 'Staff');
+        setUserRole(user.role || 'staff');
+      } catch (e) {
+        console.error('Failed to parse user:', e);
+      }
+    }
+  }, []);
 
   /* ===================== FETCH MOVIES ===================== */
   useEffect(() => {
@@ -184,11 +200,11 @@ const handleDelete = async (id: number) => {
   {/* Header */}
   <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
     <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
-      CA
+      {userName.substring(0, 2).toUpperCase()}
     </div>
     <div>
-      <div className="text-lg font-semibold leading-none">CineAdmin</div>
-      <div className="text-xs text-gray-400 mt-1">Staff Panel</div>
+      <div className="text-lg font-semibold leading-none">{userName}</div>
+      <div className="text-xs text-gray-400 mt-1 capitalize">{userRole}</div>
     </div>
   </div>
 
@@ -241,14 +257,6 @@ const handleDelete = async (id: number) => {
       <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🍿</span>
       <span>Combos</span>
     </Link>
-
-    <Link
-      href="/"
-      className="mt-4 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-[#181818]"
-    >
-      <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">←</span>
-      <span>Back to site</span>
-    </Link>
   </nav>
 </aside>
 
@@ -258,9 +266,9 @@ const handleDelete = async (id: number) => {
           <h1 className="text-3xl font-semibold">Movies</h1>
           <button
             onClick={openModal}
-            className="px-6 py-2 bg-red-600 rounded-lg"
-          >
-            + Add Movie
+              className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors">
+                <span>+</span>
+                <span>Add Movie</span>
           </button>
         </div>
 

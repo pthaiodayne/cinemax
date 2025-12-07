@@ -20,7 +20,7 @@ class Movie {
   static async findById(movieId) {
     const [rows] = await pool.execute(
       `SELECT m.*, s.name as created_by_name,
-              COALESCE(AVG(r.stars), 0) as rating,
+              fn_movie_avg_rating(m.movie_id) as rating,
               COUNT(r.rating_id) as review_count
        FROM movie m
        LEFT JOIN staff s ON m.user_id = s.user_id
@@ -64,11 +64,15 @@ class Movie {
   static async getAll(filters = {}) {
     let query = `
       SELECT m.*, s.name as created_by_name,
-             COALESCE(AVG(r.stars), 0) as rating,
-             COUNT(r.rating_id) as review_count
+             fn_movie_avg_rating(m.movie_id) as rating,
+             COUNT(r.rating_id) as review_count,
+             GROUP_CONCAT(DISTINCT g.genre_type) as genres,
+             GROUP_CONCAT(DISTINCT f.format_type) as formats
       FROM movie m
       LEFT JOIN staff s ON m.user_id = s.user_id
       LEFT JOIN review r ON m.movie_id = r.movie_id
+      LEFT JOIN genre g ON m.movie_id = g.movie_id
+      LEFT JOIN format f ON m.movie_id = f.movie_id
       WHERE 1=1
     `;
     const params = [];
@@ -94,20 +98,11 @@ class Movie {
 
     const [rows] = await pool.execute(query, params);
     
-    // Add genres and formats for each movie
-    for (const movie of rows) {
-      const [genres] = await pool.execute(
-        'SELECT genre_type FROM genre WHERE movie_id = ?',
-        [movie.movie_id]
-      );
-      movie.genres = genres.map(g => g.genre_type);
-      
-      const [formats] = await pool.execute(
-        'SELECT format_type FROM format WHERE movie_id = ?',
-        [movie.movie_id]
-      );
-      movie.formats = formats.map(f => f.format_type);
-    }
+    // Convert comma-separated strings to arrays
+    rows.forEach(movie => {
+      movie.genres = movie.genres ? movie.genres.split(',') : [];
+      movie.formats = movie.formats ? movie.formats.split(',') : [];
+    });
     
     return rows;
   }

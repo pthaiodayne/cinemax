@@ -9,11 +9,22 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const router = useRouter();
 
-  // 👉 Nếu đã login rồi thì không cho vào trang login nữa, tự về Home
+  // 👉 Nếu đã login rồi thì không cho vào trang login nữa, redirect theo role
   useEffect(() => {
     const token = localStorage.getItem("token");
-    if (token) {
-      router.replace("/"); // không cho quay lại login bằng back
+    const userStr = localStorage.getItem("user");
+    
+    if (token && userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.userType === 'staff') {
+          router.replace("/staff/dashboard");
+        } else {
+          router.replace("/");
+        }
+      } catch {
+        router.replace("/");
+      }
     }
   }, [router]);
 
@@ -40,10 +51,20 @@ export default function LoginPage() {
 
       if (data.token) {
         localStorage.setItem("token", data.token);
+        
+        // Store user info for role-based routing
+        if (data.user) {
+          localStorage.setItem("user", JSON.stringify(data.user));
+        }
+        
         alert("Login success!");
 
-        // 👉 Redirect về Home page
-        router.push("/");
+        // 👉 Redirect based on user role
+        if (data.user?.userType === 'staff') {
+          router.push("/staff/dashboard");
+        } else {
+          router.push("/");
+        }
       } else {
         alert("Login failed: " + (data.error || data.message || "Unknown error"));
       }

@@ -32,11 +32,23 @@ export default function StaffDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [movies, setMovies] = useState<Movie[]>([]);
   const [loading, setLoading] = useState(true);
+  const [staffName, setStaffName] = useState('Staff');
+  const [staffRole, setStaffRole] = useState('staff');
 
   /* ===== ROLE GUARD ===== */
   useEffect(() => {
-    if (localStorage.getItem('role') !== 'staff') {
-      window.location.href = '/';
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        if (user.userType !== 'staff') {
+          window.location.href = '/';
+        }
+        setStaffName(user.name || 'Staff');
+        setStaffRole(user.role || 'staff');
+      } catch {
+        window.location.href = '/';
+      }
     }
   }, []);
 
@@ -49,17 +61,26 @@ export default function StaffDashboard() {
           fetch(`${API}/movies`),
         ]);
 
-        if (!bRes.ok) throw new Error('Bookings denied');
-        if (!mRes.ok) throw new Error('Movies failed');
+        if (!bRes.ok) {
+          console.error('Bookings response:', bRes.status, bRes.statusText);
+          throw new Error('Bookings denied');
+        }
+        if (!mRes.ok) {
+          console.error('Movies response:', mRes.status, mRes.statusText);
+          throw new Error('Movies failed');
+        }
 
         const bData = await bRes.json();
         const mData = await mRes.json();
 
+        console.log('Bookings data:', bData);
+        console.log('Movies data:', mData);
+
         setBookings(bData.bookings || []);
         setMovies(mData.movies || []);
       } catch (e) {
-        console.error(e);
-        alert('Failed to load dashboard data');
+        console.error('Dashboard load error:', e);
+        alert('Failed to load dashboard data: ' + (e instanceof Error ? e.message : String(e)));
       } finally {
         setLoading(false);
       }
@@ -112,11 +133,11 @@ export default function StaffDashboard() {
   {/* Header */}
   <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
     <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
-      CA
+      {staffName.charAt(0).toUpperCase()}
     </div>
     <div>
-      <div className="text-lg font-semibold leading-none">CineAdmin</div>
-      <div className="text-xs text-gray-400 mt-1">Staff Panel</div>
+      <div className="text-lg font-semibold leading-none">{staffName}</div>
+      <div className="text-xs text-gray-400 mt-1 capitalize">{staffRole}</div>
     </div>
   </div>
 

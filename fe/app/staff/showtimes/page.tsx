@@ -36,6 +36,8 @@ const ShowtimePage: React.FC = () => {
   const [theaters, setTheaters] = useState<Theater[]>([]);
   const [showtimes, setShowtimes] = useState<Showtime[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [userName, setUserName] = useState('Staff');
+  const [userRole, setUserRole] = useState('staff');
   const [newShowtime, setNewShowtime] = useState({
     movie_id: '',
     theater_id: '',
@@ -51,6 +53,20 @@ const ShowtimePage: React.FC = () => {
       date: '',
   });
 
+
+  // Load user info from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserName(user.name || 'Staff');
+        setUserRole(user.role || 'staff');
+      } catch (e) {
+        console.error('Failed to parse user:', e);
+      }
+    }
+  }, []);
 
   // Fetch all movies from the backend
   useEffect(() => {
@@ -233,11 +249,11 @@ const handleSubmit = async (e: React.FormEvent) => {
       <aside className="fixed left-0 top-0 h-screen w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
         <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
           <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
-            CA
+            {userName.substring(0, 2).toUpperCase()}
           </div>
           <div>
-            <div className="text-lg font-semibold leading-none">CineAdmin</div>
-            <div className="text-xs text-gray-400 mt-1">Staff Panel</div>
+            <div className="text-lg font-semibold leading-none">{userName}</div>
+            <div className="text-xs text-gray-400 mt-1 capitalize">{userRole}</div>
           </div>
         </div>
 

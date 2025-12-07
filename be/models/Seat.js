@@ -35,20 +35,13 @@ class Seat {
   }
 
   static async getAvailableSeats(theater_id, screen_number, start_time, end_time, date) {
+    // Use stored procedure for better performance
     const [rows] = await pool.execute(
-      `SELECT s.*
-       FROM seat s
-       WHERE s.theater_id = ? AND s.screen_number = ?
-       AND s.seat_number NOT IN (
-         SELECT t.seat_number
-         FROM ticket t
-         WHERE t.theater_id_showtime = ? AND t.screen_number_showtime = ?
-         AND t.start_time = ? AND t.end_time = ? AND t.date = ?
-       )
-       ORDER BY s.seat_number`,
-      [theater_id, screen_number, theater_id, screen_number, start_time, end_time, date]
+      'CALL sp_available_seats(?, ?, ?, ?, ?)',
+      [theater_id, screen_number, start_time, end_time, date]
     );
-    return rows;
+    // Stored procedure returns array of arrays, get first result set
+    return rows[0];
   }
 
   //check specific seats availability for showtime

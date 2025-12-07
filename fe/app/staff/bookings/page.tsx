@@ -11,6 +11,22 @@ const BookingsPage = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
+  const [staffName, setStaffName] = useState('Staff');
+  const [staffRole, setStaffRole] = useState('staff');
+
+  // Get staff info from localStorage
+  useEffect(() => {
+    const userStr = localStorage.getItem('user');
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setStaffName(user.name || 'Staff');
+        setStaffRole(user.role || 'staff');
+      } catch (e) {
+        console.error('Error parsing user data:', e);
+      }
+    }
+  }, []);
 
   // Fetch booking data from the backend API
   useEffect(() => {
@@ -92,11 +108,11 @@ const BookingsPage = () => {
       <aside className="fixed left-0 top-0 h-screen w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
         <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
           <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
-            CA
+            {staffName.charAt(0).toUpperCase()}
           </div>
           <div>
-            <div className="text-lg font-semibold leading-none">CineAdmin</div>
-            <div className="text-xs text-gray-400 mt-1">Staff Panel</div>
+            <div className="text-lg font-semibold leading-none">{staffName}</div>
+            <div className="text-xs text-gray-400 mt-1 capitalize">{staffRole}</div>
           </div>
         </div>
 
@@ -136,8 +152,18 @@ const BookingsPage = () => {
       {/* Main Content */}
       <main className="flex-1 ml-64 px-8 py-6 bg-[#050505]">
         <div>
-          <h1 className="text-3xl font-semibold mb-6">Bookings</h1>
-          <p className="text-lg text-gray-400 mb-6">View and manage customer bookings</p>
+          <div className="flex items-center justify-between mb-6">
+            <div>
+              <h1 className="text-3xl font-semibold">Bookings</h1>
+              <p className="text-lg text-gray-400 mt-2">View and manage customer bookings</p>
+            </div>
+            <Link href="/staff/create-booking">
+              <button className="flex items-center gap-2 px-6 py-3 bg-red-600 hover:bg-red-700 rounded-lg font-medium transition-colors">
+                <span>+</span>
+                <span>Create Booking</span>
+              </button>
+            </Link>
+          </div>
 
           {/* Search Bar */}
           <div className="mb-6">

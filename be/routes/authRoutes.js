@@ -1,7 +1,7 @@
 const express = require('express');
 const { body } = require('express-validator');
 const authController = require('../controllers/authController');
-const { auth } = require('../middlewares/auth');
+const { auth, isStaff } = require('../middlewares/auth');
 const validate = require('../middlewares/validate');
 
 const router = express.Router();
@@ -32,5 +32,8 @@ router.post('/register', registerValidation, validate, authController.register);
 router.post('/login', loginValidation, validate, authController.login); //LINK: /api/auth/login
 router.get('/profile', auth, authController.getProfile); //LINK: /api/auth/profile
 router.put('/profile', auth, updateProfileValidation, validate, authController.updateProfile); //LINK: /api/auth/profile
+
+// Staff routes
+router.get('/customers', auth, isStaff, authController.getAllCustomers); //LINK: /api/auth/customers
 
 module.exports = router;

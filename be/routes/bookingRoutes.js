@@ -22,6 +22,12 @@ const bookingValidation = [
   body('payment_status').optional().isIn(['paid', 'unpaid']).withMessage('Invalid payment status')
 ];
 
+// Staff booking validation (includes user_id for customer)
+const staffBookingValidation = [
+  body('user_id').isInt().withMessage('Valid customer user ID is required'),
+  ...bookingValidation
+];
+
 // User routes (requires authentication)
 router.post('/', auth, bookingValidation, validate, bookingController.createBooking); //POST /api/bookings
 router.get('/my-bookings', auth, bookingController.getMyBookings); //GET /api/bookings/my-bookings
@@ -31,5 +37,6 @@ router.delete('/:id', auth, bookingController.cancelBooking); //DELETE /api/book
 
 // Staff routes
 router.get('/', auth, isStaff, bookingController.getAllBookings); //GET /api/bookings
+router.post('/staff-create', auth, isStaff, staffBookingValidation, validate, bookingController.createBookingForCustomer); //POST /api/bookings/staff-create
 
 module.exports = router;

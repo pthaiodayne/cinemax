@@ -92,8 +92,6 @@ exports.createBooking = async (req, res, next) => {
         theater_id,
         screen_number,
         seatInfo.seat_number,
-        theater_id,
-        screen_number,
         start_time,
         end_time,
         date
@@ -270,5 +268,150 @@ exports.getAllBookings = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+// Create booking for customer (Staff only)
+exports.createBookingForCustomer = async (req, res, next) => {
+  const connection = await pool.getConnection();
+  
+  try {
+    await connection.beginTransaction();
+
+    if (req.user.userType !== 'staff') {
+      await connection.rollback();
+      console.log('Access denied: Only staff can create bookings for customers');
+      return res.status(403).json({ error: 'Only staff can create bookings for customers' });
+    }
+
+    const { 
+      user_id, // The customer's user_id
+      showtime: { theater_id, screen_number, start_time, end_time, date },
+      seats,
+      combos,
+      payment_method,
+      payment_status = 'unpaid'
+    } = req.body;
+
+    if (!user_id) {
+      await connection.rollback();
+      return res.status(400).json({ error: 'Customer user_id is required' });
+    }
+
+    console.log(`Staff creating booking for customer ${user_id} with showtime:`, { theater_id, screen_number, start_time, end_time, date });
+
+    //validate showtime
+    const showtime = await Showtime.findById(theater_id, screen_number, start_time, end_time, date);
+    if (!showtime) {
+      await connection.rollback();
+      console.log('Showtime not found for booking creation');
+      return res.status(404).json({ error: 'Showtime not found' });
+    }
+
+    //check: seat availability
+    if (!seats || seats.length === 0) {
+      await connection.rollback();
+      console.log('No seats selected for booking creation');
+      return res.status(400).json({ error: 'At least one seat must be selected' });
+    }
+
+    //seat availability for this showtime
+    for (const seatInfo of seats) {
+      const available = await Seat.checkAvailability(
+        theater_id,
+        screen_number,
+        seatInfo.seat_number,
+        start_time,
+        end_time,
+        date
+      );
+      
+      if (!available) {
+        await connection.rollback();
+        console.log(`Seat ${seatInfo.seat_number} is not available for booking creation`);
+        return res.status(400).json({ 
+          error: `Seat ${seatInfo.seat_number} is not available` 
+        });
+      }
+    }
+
+    //calculate total amount
+    let totalAmount = 0;
+
+    //seats cost - use seat.price directly from database
+    for (const seatInfo of seats) {
+      const seat = await Seat.findById(theater_id, screen_number, seatInfo.seat_number);
+      if (!seat) {
+        await connection.rollback();
+        console.log(`Seat ${seatInfo.seat_number} not found for booking creation`);
+        return res.status(400).json({ error: `Seat ${seatInfo.seat_number} not found` });
+      }
+      totalAmount += parseFloat(seat.price);
+    }
+
+    //combos cost
+    if (combos && combos.length > 0) {
+      for (const comboInfo of combos) {
+        const combo = await Combo.findById(comboInfo.combo_id);
+        if (!combo) {
+          await connection.rollback();
+          console.log(`Combo ${comboInfo.combo_id} not found for booking creation`);
+          return res.status(400).json({ error: `Combo ${comboInfo.combo_id} not found` });
+        }
+        totalAmount += parseFloat(combo.price) * comboInfo.quantity;
+      }
+    }
+
+    //create booking for the specified customer
+    const bookingId = await Booking.create({
+      customer_id: user_id, // Use the provided customer user_id
+      payment_method,
+      payment_status,
+      total_cost: totalAmount
+    }, connection);
+
+    //create tickets for each seat
+    for (const seatInfo of seats) {
+      const seat = await Seat.findById(theater_id, screen_number, seatInfo.seat_number);
+      
+      await Ticket.create({
+        booking_id: bookingId,
+        price_paid: seat.price,
+        theater_id_seat: theater_id,
+        screen_number_seat: screen_number,
+        seat_number: seatInfo.seat_number,
+        theater_id_showtime: theater_id,
+        screen_number_showtime: screen_number,
+        start_time: start_time,
+        end_time: end_time,
+        date: date
+      }, connection);
+    }
+
+    //add combos to booking
+    if (combos && combos.length > 0) {
+      for (const comboInfo of combos) {
+        const [result] = await connection.execute(
+          'INSERT INTO bookingcombo (booking_id, combo_id, count) VALUES (?, ?, ?)',
+          [bookingId, comboInfo.combo_id, comboInfo.quantity]
+        );
+      }
+    }
+
+    await connection.commit();
+    console.log(`Staff successfully created booking ${bookingId} for customer ${user_id}`);
+
+    const booking = await Booking.getBookingDetails(bookingId);
+
+    res.status(201).json({
+      message: 'Booking created successfully for customer',
+      booking
+    });
+  } catch (error) {
+    await connection.rollback();
+    console.error('Error in createBookingForCustomer:', error);
+    next(error);
+  } finally {
+    connection.release();
   }
 };

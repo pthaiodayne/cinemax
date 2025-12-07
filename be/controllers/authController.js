@@ -156,3 +156,25 @@ exports.updateProfile = async (req, res, next) => {
     next(error);
   }
 };
+
+// Get all customers (Staff only)
+exports.getAllCustomers = async (req, res, next) => {
+  try {
+    const { pool } = require('../db/connection');
+    
+    const [customers] = await pool.execute(
+      `SELECT user_id, name, email, phone, dob, gender, date_join 
+       FROM customer 
+       ORDER BY name ASC`
+    );
+
+    console.log(`Staff retrieved ${customers.length} customers`);
+
+    res.json({
+      count: customers.length,
+      customers
+    });
+  } catch (error) {
+    next(error);
+  }
+};

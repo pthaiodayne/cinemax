@@ -51,10 +51,10 @@ export default function Navbar() {
         <Link href="/tickets" className={active("/tickets")}>
           My Tickets
         </Link>
-
-        <Link href="/staff" className={active("/staff")}>
+        {/*
+        <Link href="/staff/dashboard" className={active("/staff/dashboard")}>
           Staff
-        </Link>
+        </Link> */}
       </div>
 
       {/* Actions: search + auth */}
