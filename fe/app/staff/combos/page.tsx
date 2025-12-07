@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // Combo type definition (without description)
 interface Combo {
@@ -108,13 +108,20 @@ const CombosPage: React.FC = () => {
     const method = isEditing ? 'PUT' : 'POST';
     const url = isEditing ? `${API_BASE}/combos/${currentComboId}` : `${API_BASE}/combos`;
 
+    // Prepare data - remove combo_id for new combos (backend trigger will generate it)
+    const dataToSend = isEditing ? newComboData : {
+      name: newComboData.name,
+      price: newComboData.price,
+      image_url: newComboData.image_url,
+    };
+
     try {
       const res = await fetch(url, {
         method: method,
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify(newComboData),
+        body: JSON.stringify(dataToSend),
       });
 
       if (!res.ok) {
@@ -123,6 +130,16 @@ const CombosPage: React.FC = () => {
 
       const data = await res.json();
       console.log(isEditing ? 'Combo updated' : 'New combo added', data.combo);
+      
+      // Refresh the combos list
+      const refreshRes = await fetch(`${API_BASE}/combos`, {
+        credentials: 'include',
+      });
+      if (refreshRes.ok) {
+        const refreshData = await refreshRes.json();
+        setCombos(refreshData.combos || []);
+      }
+      
       toggleModal();  // Close the modal after adding/updating combo
     } catch (err) {
       console.error('Error:', err);
@@ -132,7 +149,7 @@ const CombosPage: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-[#050505] text-white">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
+      <aside className="fixed left-0 top-0 h-screen w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
         <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
           <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
             CA
@@ -153,6 +170,22 @@ const CombosPage: React.FC = () => {
           </Link>
 
           <Link
+            href="/staff/bookings"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🎟️</span>
+            <span>Bookings</span>
+          </Link>
+
+          <Link
+            href="/staff/customers"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">👥</span>
+            <span>Customers</span>
+          </Link>
+
+          <Link
             href="/staff/movies"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
           >
@@ -169,43 +202,17 @@ const CombosPage: React.FC = () => {
           </Link>
 
           <Link
-            href="/staff/bookings"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🎟️</span>
-            <span>Bookings</span>
-          </Link>
-
-          <Link
             href="/staff/combos"
             className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-600 text-sm font-medium"
           >
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-black/20 text-xs">🍿</span>
             <span>Combos</span>
           </Link>
-
-          <Link
-            href="/staff/customers"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">👥</span>
-            <span>Customers</span>
-          </Link>
         </nav>
-
-        <div className="border-t border-[#242424] px-4 py-3">
-          <Link
-            href="/"
-            className="flex items-center gap-3 text-sm text-gray-300 hover:text-white"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">⮌</span>
-            <span>Back to Site</span>
-          </Link>
-        </div>
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 px-8 py-6 bg-[#050505]">
+      <main className="flex-1 ml-64 px-8 py-6 bg-[#050505]">
         <div>
           <h1 className="text-3xl font-semibold">Combos Management</h1>
           <p className="mt-1 text-sm text-gray-400">Manage food and drink combos</p>

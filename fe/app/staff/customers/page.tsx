@@ -74,7 +74,7 @@ const CustomersPage = () => {
   return (
     <div className="flex min-h-screen bg-[#050505] text-white">
       {/* Sidebar */}
-      <aside className="w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
+      <aside className="fixed left-0 top-0 h-screen w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
         <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
           <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
             CA
@@ -119,7 +119,7 @@ const CustomersPage = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 px-8 py-6">
+      <main className="flex-1 ml-64 px-8 py-6">
         <div className="mb-8">
           <h1 className="text-3xl font-bold">Customers</h1>
           <p className="text-gray-400 mt-1">View customer booking statistics</p>

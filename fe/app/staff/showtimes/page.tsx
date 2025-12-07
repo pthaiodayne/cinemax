@@ -4,7 +4,7 @@ import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 interface Movie {
   movie_id: number;
@@ -156,7 +156,7 @@ const ShowtimePage: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-[#050505] text-white">
       {/* SIDEBAR */}
-      <aside className="w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
+      <aside className="fixed left-0 top-0 h-screen w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
         <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
           <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
             CA
@@ -170,17 +170,37 @@ const ShowtimePage: React.FC = () => {
         <nav className="flex-1 px-3 py-4 space-y-1">
           <Link
             href="/staff/dashboard"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
           >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-black/20 text-xs">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
               ⌂
             </span>
             <span>Dashboard</span>
           </Link>
 
           <Link
+            href="/staff/bookings"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              🎟️
+            </span>
+            <span>Bookings</span>
+          </Link>
+
+          <Link
+            href="/staff/customers"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              👥
+            </span>
+            <span>Customers</span>
+          </Link>
+
+          <Link
             href="/staff/movies"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
           >
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
               🎬
@@ -190,60 +210,28 @@ const ShowtimePage: React.FC = () => {
 
           <Link
             href="/staff/showtimes"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium bg-red-600 text-white"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-600 text-sm font-medium"
           >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-black/20 text-xs">
               🕒
             </span>
             <span>Showtimes</span>
           </Link>
 
           <Link
-            href="/staff/bookings"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
-              🎟️
-            </span>
-            <span>Bookings</span>
-          </Link>
-
-          <Link
             href="/staff/combos"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
           >
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
               🍿
             </span>
             <span>Combos</span>
           </Link>
-
-          <Link
-            href="/staff/customers"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
-              👥
-            </span>
-            <span>Customers</span>
-          </Link>
         </nav>
-
-        <div className="border-t border-[#242424] px-4 py-3">
-          <Link
-            href="/"
-            className="flex items-center gap-3 text-sm text-gray-300 hover:text-white"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
-              ⮌
-            </span>
-            <span>Back to Site</span>
-          </Link>
-        </div>
       </aside>
 
       {/* MAIN CONTENT */}
-      <main className="flex-1 px-8 py-6 bg-[#050505]">
+      <main className="flex-1 ml-64 px-8 py-6 bg-[#050505]">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-semibold">Showtimes</h1>
           {/* Add Showtime Button */}

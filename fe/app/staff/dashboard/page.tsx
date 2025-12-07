@@ -4,7 +4,7 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
 // ====== TYPES ======
 interface BookingFromApi {
@@ -64,8 +64,13 @@ const StaffDashboard: React.FC = () => {
   const [bookings, setBookings] = useState<BookingFromApi[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [mounted, setMounted] = useState(false);
 
   const [movies, setMovies] = useState<Movie[]>([]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   // Fetch bookings from backend
   useEffect(() => {
@@ -153,7 +158,7 @@ const StaffDashboard: React.FC = () => {
   return (
     <div className="flex min-h-screen bg-[#050505] text-white">
       {/* SIDEBAR */}
-      <aside className="w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
+      <aside className="fixed left-0 top-0 h-screen w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
         <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
           <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
             CA
@@ -173,6 +178,26 @@ const StaffDashboard: React.FC = () => {
               ⌂
             </span>
             <span>Dashboard</span>
+          </Link>
+
+          <Link
+            href="/staff/bookings"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              🎟️
+            </span>
+            <span>Bookings</span>
+          </Link>
+
+          <Link
+            href="/staff/customers"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              👥
+            </span>
+            <span>Customers</span>
           </Link>
 
           <Link
@@ -196,16 +221,6 @@ const StaffDashboard: React.FC = () => {
           </Link>
 
           <Link
-            href="/staff/bookings"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
-              🎟️
-            </span>
-            <span>Bookings</span>
-          </Link>
-
-          <Link
             href="/staff/combos"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
           >
@@ -213,16 +228,6 @@ const StaffDashboard: React.FC = () => {
               🍿
             </span>
             <span>Combos</span>
-          </Link>
-
-          <Link
-            href="/staff/customers"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
-              👥
-            </span>
-            <span>Customers</span>
           </Link>
         </nav>
 
@@ -240,7 +245,7 @@ const StaffDashboard: React.FC = () => {
       </aside>
 
       {/* MAIN */}
-      <main className="flex-1 px-8 py-6 bg-[#050505]">
+      <main className="flex-1 ml-64 px-8 py-6 bg-[#050505]">
         <div>
           <h1 className="text-3xl font-semibold">Dashboard</h1>
           <p className="mt-1 text-sm text-gray-400">
@@ -354,7 +359,7 @@ const StaffDashboard: React.FC = () => {
                       {b.customer_name} • {b.ticket_count} tickets
                     </div>
                     <div className="text-[11px] text-gray-500">
-                      {new Date(b.date_time).toLocaleString('vi-VN')}
+                      {mounted ? new Date(b.date_time).toLocaleString('vi-VN') : b.date_time?.slice(0, 10)}
                     </div>
                   </div>
                   <div className="text-right">
