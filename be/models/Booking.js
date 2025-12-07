@@ -12,7 +12,8 @@ class Booking {
     discount_amount = 0
   } = bookingData;
 
-  const amount_paid = payment_status === 'paid' ? total_cost : 0;
+  // amount_paid should store the total cost, not 0 when unpaid
+  const amount_paid = total_cost;
 
   if (
     customer_id == null ||
