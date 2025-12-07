@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
 const API_BASE =
@@ -9,162 +9,155 @@ const API_BASE =
 interface Movie {
   movie_id: number;
   title: string;
-  formats: string[]; // Thêm trường formats để lưu danh sách định dạng
+  image_url: string;
 }
 
 interface Theater {
   theater_id: number;
   name: string;
-  location: string;
+}
+
+interface Auditorium {
+  auditorium_id: number;
+  format: string;  // 2D, 3D, IMAX
 }
 
 interface Showtime {
-  id: number;
+  showtime_id: number;
   movie_id: number;
-  movie_title: string;
-  theater_id: number;
   theater_name: string;
-  date: string;
+  auditorium_id: number;
+  format: string;  // Format should be based on auditorium
   start_time: string;
-  format: string;
-  seatsLeft: number;
+  date: string;
+  price: number;
 }
 
-const ShowtimesPage: React.FC = () => {
-  const [showModal, setShowModal] = useState(false); // State for modal visibility
-  const [showtimeData, setShowtimeData] = useState({
-    movie_id: '',
-    theater_id: '',
-    date: '',
-    time: '',
-    format: '2D',
-  });
-
+const ShowtimePage: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
   const [theaters, setTheaters] = useState<Theater[]>([]);
+  const [auditoriums, setAuditoriums] = useState<Auditorium[]>([]);  // Store available auditoriums for a selected theater
   const [showtimes, setShowtimes] = useState<Showtime[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [newShowtime, setNewShowtime] = useState({
+    movie_id: '',
+    theater_id: '',
+    auditorium_id: '',
+    date: '',
+    start_time: '',
+    format: '2D',  // Default format
+    price: 0,
+  });
 
+  // Fetch all movies from the backend
   useEffect(() => {
     const fetchMovies = async () => {
-      const res = await fetch(`${API_BASE}/movies`);
-      const data = await res.json();
-      setMovies(data.movies);
-    };
+      try {
+        const res = await fetch(`${API_BASE}/movies`);
+        if (!res.ok) throw new Error('Failed to fetch movies');
 
-    const fetchTheaters = async () => {
-      const res = await fetch(`${API_BASE}/showtimes/theaters`);
-      const data = await res.json();
-      setTheaters(data.theaters);
-    };
-
-    const fetchShowtimes = async () => {
-      const res = await fetch(`${API_BASE}/showtimes`);
-      const data = await res.json();
-      const showtimesWithMovie = data.showtimes.map((showtime: Showtime) => {
-        const movie = movies.find((movie) => movie.movie_id === showtime.movie_id);
-        return {
-          ...showtime,
-          movie_title: movie ? movie.title : 'Unknown Movie',
-          format: movie?.formats.join(', ') || 'Unknown Format', // Thêm định dạng vào showtime
-        };
-      });
-      setShowtimes(showtimesWithMovie);
+        const data = await res.json();
+        setMovies(data.movies);
+      } catch (err: any) {
+        console.error(err);
+      }
     };
 
     fetchMovies();
-    fetchTheaters();
-    fetchShowtimes();
-  }, [movies]);
+  }, []);
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setShowtimeData({
-      ...showtimeData,
-      [name]: value,
-    });
+  // Fetch all theaters from the backend
+  useEffect(() => {
+    const fetchTheaters = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/showtimes/theaters`);
+        if (!res.ok) throw new Error('Failed to fetch theaters');
+
+        const data = await res.json();
+        setTheaters(data.theaters);
+      } catch (err: any) {
+        console.error(err);
+      }
+    };
+
+    fetchTheaters();
+  }, []);
+
+  // Fetch all showtimes from the backend
+  useEffect(() => {
+    const fetchShowtimes = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/showtimes`);
+        if (!res.ok) throw new Error('Failed to fetch showtimes');
+
+        const data = await res.json();
+        setShowtimes(data.showtimes);
+      } catch (err: any) {
+        console.error(err);
+      }
+    };
+
+    fetchShowtimes();
+  }, []);
+
+  // Fetch available auditoriums for a selected theater
+  const fetchAuditoriumsForTheater = async (theaterId: string) => {
+    try {
+      const res = await fetch(`${API_BASE}/showtimes/theaters/${theaterId}/auditoriums`);
+      if (!res.ok) throw new Error('Failed to fetch auditoriums');
+
+      const data = await res.json();
+      setAuditoriums(data.auditoriums); // Update auditoriums based on the selected theater
+    } catch (err: any) {
+      console.error(err);
+    }
   };
 
+  // Toggle modal visibility
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
+
+  // Handle input changes for the new showtime
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
+    const { name, value } = e.target;
+    setNewShowtime((prevState) => ({
+      ...prevState,
+      [name]: value,
+    }));
+
+    // If theater is changed, fetch available auditoriums
+    if (name === 'theater_id') {
+      fetchAuditoriumsForTheater(value);
+    }
+  };
+
+  // Handle form submission for adding a new showtime
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    const newShowtime = {
-      movie_id: showtimeData.movie_id,
-      theater_id: showtimeData.theater_id,
-      date: showtimeData.date,
-      start_time: showtimeData.time,
-      format: showtimeData.format,
-    };
-
-    const res = await fetch(`${API_BASE}/showtimes`, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(newShowtime),
-    });
-
-    if (res.ok) {
-      const data = await res.json();
-      setShowtimes((prevShowtimes) => [...prevShowtimes, data.showtime]);
-      setShowModal(false);
-    } else {
-      alert('Failed to add showtime');
-    }
-  };
-
-  const handleDelete = async (id: number) => {
-    const res = await fetch(`${API_BASE}/showtimes/${id}`, {
-      method: 'DELETE',
-    });
-
-    if (res.ok) {
-      setShowtimes((prevShowtimes) =>
-        prevShowtimes.filter((showtime) => showtime.id !== id)
-      );
-    } else {
-      alert('Failed to delete showtime');
-    }
-  };
-
-  const handleEdit = async (id: number) => {
-    const showtime = showtimes.find((showtime) => showtime.id === id);
-    if (showtime) {
-      setShowtimeData({
-        movie_id: showtime.movie_id.toString(),
-        theater_id: showtime.theater_id.toString(),
-        date: showtime.date,
-        time: showtime.start_time,
-        format: showtime.format,
+    try {
+      const res = await fetch(`${API_BASE}/showtimes`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newShowtime),
       });
-      setShowModal(true);
+
+      if (!res.ok) throw new Error('Failed to add showtime');
+      const data = await res.json();
+      setShowtimes([...showtimes, data.showtime]); // Add the new showtime to the list
+      closeModal(); // Close modal after submitting
+    } catch (err: any) {
+      console.error(err);
     }
-  };
-
-  const formatDate = (date: string) => {
-    const dt = new Date(date);
-    return dt.toLocaleDateString('vi-VN', {
-      day: '2-digit',
-      month: '2-digit',
-      year: 'numeric',
-    });
-  };
-
-  const formatTime = (time: string) => {
-    // Chỉ hiển thị giờ mà không có phần "17:00:00.000Z"
-    const date = new Date(time);
-    return date.toLocaleTimeString('en-GB', {
-      hour: '2-digit',
-      minute: '2-digit',
-    });
   };
 
   return (
-    <div className="flex">
-      {/* Sidebar */}
-      <div className="w-64 bg-[#0b0b0b] text-white p-6">
-        <div className="flex items-center gap-2 mb-6">
+    <div className="flex min-h-screen bg-[#050505] text-white">
+      {/* SIDEBAR */}
+      <aside className="w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
+        <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
           <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
             CA
           </div>
@@ -173,7 +166,8 @@ const ShowtimesPage: React.FC = () => {
             <div className="text-xs text-gray-400 mt-1">Staff Panel</div>
           </div>
         </div>
-        <nav className="space-y-1">
+
+        <nav className="flex-1 px-3 py-4 space-y-1">
           <Link
             href="/staff/dashboard"
             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
@@ -183,117 +177,153 @@ const ShowtimesPage: React.FC = () => {
             </span>
             <span>Dashboard</span>
           </Link>
+
           <Link
             href="/staff/movies"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
           >
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
               🎬
             </span>
             <span>Movies</span>
           </Link>
+
           <Link
             href="/staff/showtimes"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-600 text-sm font-medium"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium bg-red-600 text-white"
           >
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
               🕒
             </span>
             <span>Showtimes</span>
           </Link>
+
           <Link
             href="/staff/bookings"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
           >
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
               🎟️
             </span>
             <span>Bookings</span>
           </Link>
-          <Link
-            href="/staff/customers"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
-              👥
-            </span>
-            <span>Customers</span>
-          </Link>
+
           <Link
             href="/staff/combos"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
           >
             <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
               🍿
             </span>
             <span>Combos</span>
           </Link>
+
+          <Link
+            href="/staff/customers"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              👥
+            </span>
+            <span>Customers</span>
+          </Link>
         </nav>
-      </div>
 
-      {/* Main Content */}
-      <div className="flex-1 bg-[#141414] text-white p-6">
-        <h1 className="text-3xl font-semibold mb-6">Showtimes</h1>
-        <p className="text-lg text-gray-400 mb-6">Manage movie schedules and screenings</p>
+        <div className="border-t border-[#242424] px-4 py-3">
+          <Link
+            href="/"
+            className="flex items-center gap-3 text-sm text-gray-300 hover:text-white"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              ⮌
+            </span>
+            <span>Back to Site</span>
+          </Link>
+        </div>
+      </aside>
 
-        {/* Add Showtime Button */}
-        <div className="mb-6">
+      {/* MAIN CONTENT */}
+      <main className="flex-1 px-8 py-6 bg-[#050505]">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-semibold">Showtimes</h1>
+          {/* Add Showtime Button */}
           <button
-            onClick={() => setShowModal(true)}  // Show modal when clicked
-            className="px-6 py-3 bg-red-600 text-white rounded-lg"
+            onClick={openModal}
+            className="px-6 py-2 bg-red-600 text-white rounded-lg text-lg"
           >
             + Add Showtime
           </button>
         </div>
 
-        {/* Showtime Table */}
-        <table className="w-full text-left text-gray-400">
-          <thead>
-            <tr className="border-b border-gray-700">
-              <th className="py-3 px-4">Movie</th>
-              <th className="py-3 px-4">Theater</th>
-              <th className="py-3 px-4">Date & Time</th>
-              <th className="py-3 px-4">Format</th>
-              <th className="py-3 px-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {showtimes.map((showtime) => (
-              <tr key={`${showtime.id}-${showtime.movie_id}-${showtime.date}`} className="border-b border-gray-700">
-                <td className="py-3 px-4 text-white">{showtime.movie_title}</td>
-                <td className="py-3 px-4">{showtime.theater_name}</td>
-                <td className="py-3 px-4">
-                  {formatTime(showtime.start_time)} <br /> {formatDate(showtime.date)}
-                </td>
-                <td className="py-3 px-4">{showtime.format}</td>
-                <td className="py-3 px-4">
-                  <button onClick={() => handleEdit(showtime.id)} className="text-yellow-400 mr-4">
-                    Edit
-                  </button>
-                  <button onClick={() => handleDelete(showtime.id)} className="text-red-600">
-                    Delete
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        <p className="mt-1 text-sm text-gray-400">Manage your cinema showtimes here.</p>
 
-      {/* Modal for Add Showtime */}
-      {showModal && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-center z-10">
-          <div className="bg-[#121212] p-6 rounded-lg max-w-lg w-full">
-            <h3 className="text-xl font-semibold mb-4">Add New Showtime</h3>
+        {/* Showtimes Table */}
+        <section className="mt-6">
+          <table className="min-w-full bg-[#101010] rounded-lg overflow-hidden">
+            <thead>
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Movie Title</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Theater</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Date & Time</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Format</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {showtimes.map((showtime) => {
+                const movie = movies.find((movie) => movie.movie_id === showtime.movie_id);
+                return (
+                  <tr key={showtime.showtime_id}>
+                    <td className="px-6 py-4 text-sm text-gray-300 flex items-center gap-3">
+                      {movie?.image_url && (
+                        <img
+                          src={movie.image_url}
+                          alt={movie.title}
+                          className="w-12 h-16 object-cover rounded-md"
+                        />
+                      )}
+                      <span>{movie?.title}</span>
+                    </td>
+                    <td className="px-6 py-4 text-sm text-gray-300">{showtime.theater_name}</td>
+                    <td className="px-6 py-4 text-sm text-gray-300">{`${showtime.date} ${showtime.start_time}`}</td>
+                    <td className="px-6 py-4 text-sm text-gray-300">{showtime.format}</td>
+                    <td className="px-6 py-4 text-sm">
+                      <Link
+                        href={`/staff/showtimes/edit/${showtime.showtime_id}`}
+                        className="text-blue-500 hover:text-blue-300"
+                      >
+                        Edit
+                      </Link>
+                      <span className="mx-2">|</span>
+                      <button
+                        onClick={() => handleDelete(showtime.showtime_id)}
+                        className="text-red-500 hover:text-red-300"
+                      >
+                        Delete
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </section>
+      </main>
+
+      {/* Add Showtime Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
+          <div className="bg-[#111] p-6 rounded-lg max-w-md w-full">
+            <h2 className="text-2xl font-semibold mb-4">Add New Showtime</h2>
             <form onSubmit={handleSubmit}>
-              {/* Movie Dropdown */}
               <div className="mb-4">
-                <label className="block text-sm text-white mb-2">Movie</label>
+                <label className="block text-sm text-gray-400">Movie</label>
                 <select
                   name="movie_id"
-                  value={showtimeData.movie_id}
+                  value={newShowtime.movie_id}
                   onChange={handleChange}
-                  className="w-full p-2 bg-[#181818] text-white rounded-md"
+                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
+                  required
                 >
                   <option value="">Select movie</option>
                   {movies.map((movie) => (
@@ -304,78 +334,85 @@ const ShowtimesPage: React.FC = () => {
                 </select>
               </div>
 
-              {/* Theater Dropdown */}
               <div className="mb-4">
-                <label className="block text-sm text-white mb-2">Theater</label>
+                <label className="block text-sm text-gray-400">Theater</label>
                 <select
                   name="theater_id"
-                  value={showtimeData.theater_id}
+                  value={newShowtime.theater_id}
                   onChange={handleChange}
-                  className="w-full p-2 bg-[#181818] text-white rounded-md"
+                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
+                  required
                 >
                   <option value="">Select theater</option>
                   {theaters.map((theater) => (
                     <option key={theater.theater_id} value={theater.theater_id}>
-                      {theater.name} - {theater.location}
+                      {theater.name}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {/* Date Input */}
               <div className="mb-4">
-                <label className="block text-sm text-white mb-2">Date</label>
+                <label className="block text-sm text-gray-400">Date</label>
                 <input
                   type="date"
                   name="date"
-                  value={showtimeData.date}
+                  value={newShowtime.date}
                   onChange={handleChange}
-                  className="w-full p-2 bg-[#181818] text-white rounded-md"
+                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
                   required
                 />
               </div>
 
-              {/* Time Input */}
               <div className="mb-4">
-                <label className="block text-sm text-white mb-2">Time</label>
+                <label className="block text-sm text-gray-400">Time</label>
                 <input
                   type="time"
-                  name="time"
-                  value={showtimeData.time}
+                  name="start_time"
+                  value={newShowtime.start_time}
                   onChange={handleChange}
-                  className="w-full p-2 bg-[#181818] text-white rounded-md"
+                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
                   required
                 />
               </div>
 
-              {/* Format Dropdown */}
               <div className="mb-4">
-                <label className="block text-sm text-white mb-2">Format</label>
+                <label className="block text-sm text-gray-400">Format</label>
                 <select
                   name="format"
-                  value={showtimeData.format}
+                  value={newShowtime.format}
                   onChange={handleChange}
-                  className="w-full p-2 bg-[#181818] text-white rounded-md"
+                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
                 >
                   <option value="2D">2D</option>
                   <option value="3D">3D</option>
                   <option value="IMAX">IMAX</option>
-                  <option value="4DX">4DX</option>
                 </select>
               </div>
 
-              {/* Submit and Cancel Buttons */}
-              <div className="flex justify-between mb-4">
+              <div className="mb-4">
+                <label className="block text-sm text-gray-400">Price (VND)</label>
+                <input
+                  type="number"
+                  name="price"
+                  value={newShowtime.price}
+                  onChange={handleChange}
+                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
+                  required
+                />
+              </div>
+
+              <div className="flex justify-between items-center">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-6 py-3 bg-gray-500 text-white rounded-lg"
+                  onClick={closeModal}
+                  className="text-sm text-gray-300 hover:text-white"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-red-600 text-white rounded-lg"
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg text-lg"
                 >
                   Add Showtime
                 </button>
@@ -388,4 +425,4 @@ const ShowtimesPage: React.FC = () => {
   );
 };
 
-export default ShowtimesPage;
+export default ShowtimePage;

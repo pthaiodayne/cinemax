@@ -1,59 +1,46 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
 const CustomersPage = () => {
-  // Sample customer data
-  const customers = [
-    {
-      customerId: 'NVA',
-      name: 'Nguyen Van A',
-      email: 'nguyenvana@email.com',
-      phone: '0901234567',
-      membership: 'Gold',
-      points: 2500,
-      totalSpent: 1250000,
-      bookings: 12,
-    },
-    {
-      customerId: 'TTB',
-      name: 'Tran Thi B',
-      email: 'tranthitb@email.com',
-      phone: '0912345678',
-      membership: 'Silver',
-      points: 1200,
-      totalSpent: 680000,
-      bookings: 7,
-    },
-    {
-      customerId: 'LVC',
-      name: 'Le Van C',
-      email: 'levanc@email.com',
-      phone: '0923456789',
-      membership: 'Bronze',
-      points: 450,
-      totalSpent: 285000,
-      bookings: 3,
-    },
-    {
-      customerId: 'PTD',
-      name: 'Pham Thi D',
-      email: 'phamthid@email.com',
-      phone: '0934567890',
-      membership: 'Platinum',
-      points: 5200,
-      totalSpent: 3450000,
-      bookings: 28,
-    },
-  ];
-
-  // Search input state
+  const [customers, setCustomers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Handle input change for search
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+  // Fetch customer data from the backend API
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/customers`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`, // Assuming the token is stored in localStorage
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to fetch customers');
+        }
+
+        const data = await res.json();
+        setCustomers(data.customers);
+      } catch (err) {
+        console.error('Error fetching customers:', err);
+        setError('Failed to load customers');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomers();
+  }, []);
+
+  // Handle search input change
+  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
   };
 
   // Filter customers based on search query
@@ -75,30 +62,11 @@ const CustomersPage = () => {
               </Link>
             </li>
             <li>
-              <Link href="/staff/movies">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Movies</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/showtimes">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Showtimes</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/bookings">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Bookings</button>
-              </Link>
-            </li>
-            <li>
               <Link href="/staff/customers">
                 <button className="w-full py-2 px-4 bg-red-600 rounded-md">Customers</button>
               </Link>
             </li>
-            <li>
-              <Link href="/staff/combos">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Combos</button>
-              </Link>
-            </li>
+            {/* Other nav items */}
           </ul>
         </nav>
       </div>
@@ -113,51 +81,38 @@ const CustomersPage = () => {
           <input
             type="text"
             value={searchQuery}
-            onChange={handleSearchChange}
+            onChange={handleSearch}
             placeholder="Search by name or email..."
             className="w-full py-2 px-4 bg-gray-700 rounded-md"
           />
         </div>
 
         {/* Customers Table */}
-        <table className="w-full text-left text-gray-400">
-          <thead>
-            <tr className="border-b border-gray-700">
-              <th className="py-3 px-4">Customer</th>
-              <th className="py-3 px-4">Contact</th>
-              <th className="py-3 px-4">Membership</th>
-              <th className="py-3 px-4">Points</th>
-              <th className="py-3 px-4">Total Spent</th>
-              <th className="py-3 px-4">Bookings</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredCustomers.map((customer) => (
-              <tr key={customer.customerId} className="border-b border-gray-700">
-                <td className="py-3 px-4">{customer.name}</td>
-                <td className="py-3 px-4">{customer.email} <br /> {customer.phone}</td>
-                <td className="py-3 px-4">
-                  <span
-                    className={`px-2 py-1 rounded-md ${
-                      customer.membership === 'Gold'
-                        ? 'bg-yellow-500'
-                        : customer.membership === 'Silver'
-                        ? 'bg-gray-500'
-                        : customer.membership === 'Bronze'
-                        ? 'bg-brown-500'
-                        : 'bg-purple-500'
-                    }`}
-                  >
-                    {customer.membership}
-                  </span>
-                </td>
-                <td className="py-3 px-4">{customer.points}</td>
-                <td className="py-3 px-4">{customer.totalSpent.toLocaleString()} ₫</td>
-                <td className="py-3 px-4">{customer.bookings} bookings</td>
+        {loading ? (
+          <div>Loading...</div>
+        ) : (
+          <table className="w-full text-left text-gray-400">
+            <thead>
+              <tr className="border-b border-gray-700">
+                <th className="py-3 px-4">Customer</th>
+                <th className="py-3 px-4">Contact</th>
+                <th className="py-3 px-4">Bookings</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {filteredCustomers.map((customer) => (
+                <tr key={customer.customerId} className="border-b border-gray-700">
+                  <td className="py-3 px-4">{customer.name}</td>
+                  <td className="py-3 px-4">
+                    <div>{customer.email}</div>
+                    <div>{customer.phone}</div>
+                  </td>
+                  <td className="py-3 px-4">{customer.bookings} bookings</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
 
       {/* Styles */}

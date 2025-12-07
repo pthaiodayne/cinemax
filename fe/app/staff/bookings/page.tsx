@@ -1,279 +1,197 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
 const BookingsPage = () => {
-  const [showModal, setShowModal] = useState(false); // State for modal visibility
-  const [selectedBooking, setSelectedBooking] = useState<any>(null); // Store selected booking
+  const [bookings, setBookings] = useState<any[]>([]);
+  const [users, setUsers] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Sample booking data
-  const bookings = [
-    {
-      bookingCode: 'CGV2024031501',
-      movie: 'Dune: Part Two',
-      theater: 'CGV Vincom Center - Cinema 2 - IMAX',
-      dateTime: '2024-03-15 19:30',
-      seats: ['F5', 'F6'],
-      combos: ['Couple Combo x1'],
-      totalAmount: 439000,
-      status: 'upcoming',
-    },
-    {
-      bookingCode: 'CGV2024030801',
-      movie: 'Kung Fu Panda 4',
-      theater: 'Galaxy Cinema - Room 1',
-      dateTime: '2024-03-08 11:30',
-      seats: ['D3', 'D4', 'D5'],
-      combos: ['Single Combo x1'],
-      totalAmount: 444000,
-      status: 'completed',
-    },
-  ];
+  // Fetch booking data from the backend API
+  useEffect(() => {
+    const fetchBookings = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/bookings`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`, // Assuming the token is stored in localStorage
+          },
+        });
 
-  const openModal = (booking: any) => {
-    setSelectedBooking(booking); // Set the selected booking data
-    setShowModal(true); // Show the modal
+        if (!res.ok) {
+          throw new Error('Failed to fetch bookings');
+        }
+
+        const data = await res.json();
+        setBookings(data.bookings);
+      } catch (err) {
+        console.error('Error fetching bookings:', err);
+        setError('Failed to load bookings');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchBookings();
+  }, []);
+
+  // Fetch customer data to link User ID with User Name
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/customers`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`, // Assuming the token is stored in localStorage
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to fetch customers');
+        }
+
+        const data = await res.json();
+        setUsers(data.customers); // Assuming `data.customers` is the array of users
+      } catch (err) {
+        console.error('Error fetching customers:', err);
+        setError('Failed to load customers');
+      }
+    };
+
+    fetchCustomers();
+  }, []);
+
+  // Handle search input change
+  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
   };
 
-  const closeModal = () => {
-    setShowModal(false); // Close the modal
+  // Filter bookings based on search query
+  const filteredBookings = bookings.filter((booking) =>
+    booking['Booking ID'].toString().includes(searchQuery) ||
+    booking['Date & Time'].toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Get the user name for a specific user ID from the customer data
+  const getCustomerName = (userId: string) => {
+    const user = users.find((user) => user.id === userId);
+    return user ? user.name : 'Unknown User';
   };
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-[#050505] text-white">
       {/* Sidebar */}
-      <div className="sidebar">
-        <div className="logo">CineAdmin</div>
-        <nav>
-          <ul>
-            <li>
-              <Link href="/staff/dashboard">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Dashboard</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/movies">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Movies</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/showtimes">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Showtimes</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/bookings">
-                <button className="w-full py-2 px-4 bg-red-600 rounded-md">Bookings</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/customers">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Customers</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/combos">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Combos</button>
-              </Link>
-            </li>
-          </ul>
-        </nav>
-      </div>
-
-      {/* Main Content */}
-      <div className="flex-1 bg-[#141414] text-white p-6">
-        <h1 className="text-3xl font-semibold mb-6">Bookings</h1>
-        <p className="text-lg text-gray-400 mb-6">View and manage customer bookings</p>
-
-        {/* Search Bar */}
-        <div className="mb-6">
-          <input
-            type="text"
-            placeholder="Search by booking code or movie..."
-            className="w-full py-2 px-4 bg-gray-700 rounded-md"
-          />
-        </div>
-
-        {/* Bookings Table */}
-        <table className="w-full text-left text-gray-400">
-          <thead>
-            <tr className="border-b border-gray-700">
-              <th className="py-3 px-4">Booking Code</th>
-              <th className="py-3 px-4">Movie</th>
-              <th className="py-3 px-4">Theater</th>
-              <th className="py-3 px-4">Date & Time</th>
-              <th className="py-3 px-4">Amount</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {bookings.map((booking, index) => (
-              <tr key={index} className="border-b border-gray-700">
-                <td className="py-3 px-4">{booking.bookingCode}</td>
-                <td className="py-3 px-4">{booking.movie}</td>
-                <td className="py-3 px-4">{booking.theater}</td>
-                <td className="py-3 px-4">{booking.dateTime}</td>
-                <td className="py-3 px-4">{booking.totalAmount.toLocaleString()} ₫</td>
-                <td className="py-3 px-4">
-                  <span
-                    className={`px-2 py-1 rounded-md ${
-                      booking.status === 'completed' ? 'bg-blue-500' : 'bg-green-500'
-                    }`}
-                  >
-                    {booking.status}
-                  </span>
-                </td>
-                <td className="py-3 px-4">
-                  <button
-                    onClick={() => openModal(booking)} // Open the modal when clicked
-                    className="text-blue-500 hover:text-blue-700"
-                  >
-                    <i className="fas fa-eye"></i> View
-                  </button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Modal for Booking Details */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2 className="text-2xl font-semibold mb-4">Booking Details</h2>
-
-            {/* Booking Information */}
-            <div className="mb-4">
-              <strong>Booking Code:</strong> <span className="text-red-500">{selectedBooking.bookingCode}</span>
-            </div>
-            <div className="mb-4">
-              <strong>Movie & Showtime:</strong>
-              <p>{selectedBooking.movie} - {selectedBooking.theater} - {selectedBooking.dateTime}</p>
-            </div>
-            <div className="mb-4">
-              <strong>Seats:</strong> {selectedBooking.seats.join(', ')}
-            </div>
-            <div className="mb-4">
-              <strong>Combos:</strong> {selectedBooking.combos.join(', ')}
-            </div>
-            <div className="mb-4">
-              <strong>Total Amount:</strong> {selectedBooking.totalAmount.toLocaleString()} ₫
-            </div>
-
-            {/* Close Modal Button */}
-            <div className="flex justify-end">
-              <button
-                onClick={closeModal}
-                className="px-6 py-3 bg-gray-700 text-white rounded-lg"
-              >
-                Close
-              </button>
-            </div>
+      <aside className="w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
+        <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
+          <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
+            CA
+          </div>
+          <div>
+            <div className="text-lg font-semibold leading-none">CineAdmin</div>
+            <div className="text-xs text-gray-400 mt-1">Staff Panel</div>
           </div>
         </div>
-      )}
 
-      {/* Styles */}
-      <style jsx>{`
-        .sidebar {
-          width: 250px;
-          min-width: 250px;
-          background-color: #141414;
-          color: white;
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-        }
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          <Link
+            href="/staff/dashboard"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">⌂</span>
+            <span>Dashboard</span>
+          </Link>
 
-        .logo {
-          font-size: 24px;
-          font-weight: bold;
-          margin-bottom: 20px;
-        }
+          <Link
+            href="/staff/bookings"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-600 text-sm font-medium"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-black/20 text-xs">🎟️</span>
+            <span>Bookings</span>
+          </Link>
 
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: rgba(0, 0, 0, 0.7);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 100;
-        }
+          <Link
+            href="/staff/combos"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🍿</span>
+            <span>Combos</span>
+          </Link>
 
-        .modal-content {
-          background-color: #222;
-          padding: 30px;
-          border-radius: 8px;
-          width: 400px;
-        }
+          <Link
+            href="/staff/customers"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">👥</span>
+            <span>Customers</span>
+          </Link>
+        </nav>
 
-        .form-group {
-          margin-bottom: 20px;
-        }
+        <div className="border-t border-[#242424] px-4 py-3">
+          <Link
+            href="/"
+            className="flex items-center gap-3 text-sm text-gray-300 hover:text-white"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">⮌</span>
+            <span>Back to Site</span>
+          </Link>
+        </div>
+      </aside>
 
-        .form-group label {
-          display: block;
-          margin-bottom: 8px;
-          color: white;
-        }
+      {/* Main Content */}
+      <main className="flex-1 px-8 py-6 bg-[#050505]">
+        <div>
+          <h1 className="text-3xl font-semibold mb-6">Bookings</h1>
+          <p className="text-lg text-gray-400 mb-6">View and manage customer bookings</p>
 
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-          width: 100%;
-          padding: 10px;
-          background-color: #333;
-          color: white;
-          border: 1px solid #555;
-          border-radius: 8px;
-        }
+          {/* Search Bar */}
+          <div className="mb-6">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={handleSearch}
+              placeholder="Search by booking code or movie..."
+              className="w-full py-2 px-4 bg-gray-700 rounded-md"
+            />
+          </div>
 
-        .bg-gray-700 {
-          background-color: #333;
-        }
-
-        .bg-red-600 {
-          background-color: #e53e3e;
-        }
-
-        .bg-gray-500 {
-          background-color: #6b7280;
-        }
-
-        .text-white {
-          color: white;
-        }
-
-        .rounded-lg {
-          border-radius: 8px;
-        }
-
-        .movie-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-
-        .movie-table th,
-        .movie-table td {
-          padding: 10px;
-          border-bottom: 1px solid #333;
-        }
-
-        .movie-table th {
-          background-color: #222;
-        }
-
-        .movie-table tbody tr:hover {
-          background-color: #222;
-        }
-      `}</style>
+          {/* Bookings Table */}
+          {loading ? (
+            <div>Loading...</div>
+          ) : (
+            <table className="w-full text-left text-gray-400">
+              <thead>
+                <tr className="border-b border-gray-700">
+                  <th className="py-3 px-4">Booking Code</th>
+                  <th className="py-3 px-4">Payment Method</th>
+                  <th className="py-3 px-4">Amount Paid</th>
+                  <th className="py-3 px-4">Date & Time</th>
+                  <th className="py-3 px-4">User</th>
+                  <th className="py-3 px-4">Actions</th>
+                </tr>
+              </thead>
+              <tbody>
+                {filteredBookings.map((booking) => (
+                  <tr key={booking['Booking ID']} className="border-b border-gray-700">
+                    <td className="py-3 px-4">{booking['Booking ID']}</td>
+                    <td className="py-3 px-4">{booking['Payment Method']}</td>
+                    <td className="py-3 px-4">{booking['Amount Paid'].toLocaleString()} ₫</td>
+                    <td className="py-3 px-4">{new Date(booking['Date & Time']).toLocaleString()}</td>
+                    <td className="py-3 px-4">{getCustomerName(booking['User ID'])}</td>
+                    <td className="py-3 px-4">
+                      <Link href={`/staff/bookings/${booking['Booking ID']}`}>
+                        <button className="text-blue-400 hover:underline">View</button>
+                      </Link>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+        </div>
+      </main>
     </div>
   );
 };

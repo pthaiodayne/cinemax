@@ -1,313 +1,324 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
-const CombosPage = () => {
-  const [showModal, setShowModal] = useState(false); // State for modal visibility
-  const [comboData, setComboData] = useState({
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
+
+// Combo type definition (without description)
+interface Combo {
+  combo_id: string;
+  name: string;
+  price: number;
+  image_url: string;
+  available?: boolean;
+}
+
+const CombosPage: React.FC = () => {
+  const [combos, setCombos] = useState<Combo[]>([]);
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(false);
+  const [isEditing, setIsEditing] = useState<boolean>(false);
+  const [currentComboId, setCurrentComboId] = useState<string | null>(null);
+  const [newComboData, setNewComboData] = useState<Combo>({
+    combo_id: '',
     name: '',
-    description: '',
-    price: '',
-    imageUrl: '',
+    price: 0,
+    image_url: '',
+    available: true,
   });
 
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  // Fetch combos from backend
+  useEffect(() => {
+    const fetchCombos = async () => {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const res = await fetch(`${API_BASE}/combos`, {
+          credentials: 'include',
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to fetch combos');
+        }
+
+        const data = await res.json();
+        setCombos(data.combos || []);
+      } catch (err: any) {
+        console.error(err);
+        setError('Failed to load combos');
+        setCombos([]);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCombos();
+  }, []);
+
+  // Handle search query change
+  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
+  };
+
+  // Filter combos based on the search query
+  const filteredCombos = combos.filter((combo) =>
+    combo.name.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  // Handle modal toggle
+  const toggleModal = () => {
+    setIsModalOpen(!isModalOpen);
+    if (isModalOpen) {
+      // Reset data when modal is closed
+      setNewComboData({
+        combo_id: '',
+        name: '',
+        price: 0,
+        image_url: '',
+        available: true,
+      });
+      setIsEditing(false);
+      setCurrentComboId(null);
+    }
+  };
+
+  // Handle form input change
+  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setComboData({
-      ...comboData,
+    setNewComboData({
+      ...newComboData,
       [name]: value,
     });
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    console.log(comboData); // Log combo data, you can replace this with an API call later
-    setShowModal(false); // Close modal after submission
+  // Handle edit combo
+  const handleEditCombo = (combo: Combo) => {
+    setNewComboData(combo);  // Set the current combo data into the form
+    setCurrentComboId(combo.combo_id);  // Store the combo ID
+    setIsEditing(true);  // Mark that we are editing
+    toggleModal();  // Open the modal
   };
 
-  // Sample combo data
-  const combos = [
-    {
-      name: 'Single Combo',
-      description: 'Perfect for solo movie goers',
-      price: '79.000 ₫',
-      imageUrl: '/path/to/image1.jpg',
-    },
-    {
-      name: 'Couple Combo',
-      description: 'Share the moment together',
-      price: '139.000 ₫',
-      imageUrl: '/path/to/image2.jpg',
-    },
-    {
-      name: 'Family Combo',
-      description: 'Fun for the whole family',
-      price: '219.000 ₫',
-      imageUrl: '/path/to/image3.jpg',
-    },
-    {
-      name: 'Premium Snack Box',
-      description: 'Elevated cinema experience',
-      price: '169.000 ₫',
-      imageUrl: '/path/to/image4.jpg',
-    },
-  ];
+  // Handle save/submit combo
+  const handleSubmitCombo = async () => {
+    const method = isEditing ? 'PUT' : 'POST';
+    const url = isEditing ? `${API_BASE}/combos/${currentComboId}` : `${API_BASE}/combos`;
+
+    try {
+      const res = await fetch(url, {
+        method: method,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(newComboData),
+      });
+
+      if (!res.ok) {
+        throw new Error(isEditing ? 'Failed to update combo' : 'Failed to add new combo');
+      }
+
+      const data = await res.json();
+      console.log(isEditing ? 'Combo updated' : 'New combo added', data.combo);
+      toggleModal();  // Close the modal after adding/updating combo
+    } catch (err) {
+      console.error('Error:', err);
+    }
+  };
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-[#050505] text-white">
       {/* Sidebar */}
-      <div className="sidebar">
-        <div className="logo">CineAdmin</div>
-        <nav>
-          <ul>
-            <li>
-              <Link href="/staff/dashboard">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Dashboard</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/movies">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Movies</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/showtimes">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Showtimes</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/bookings">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Bookings</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/customers">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Customers</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/combos">
-                <button className="w-full py-2 px-4 bg-red-600 rounded-md">Combos</button>
-              </Link>
-            </li>
-          </ul>
+      <aside className="w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
+        <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
+          <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
+            CA
+          </div>
+          <div>
+            <div className="text-lg font-semibold leading-none">CineAdmin</div>
+            <div className="text-xs text-gray-400 mt-1">Staff Panel</div>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          <Link
+            href="/staff/dashboard"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">⌂</span>
+            <span>Dashboard</span>
+          </Link>
+
+          <Link
+            href="/staff/movies"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🎬</span>
+            <span>Movies</span>
+          </Link>
+
+          <Link
+            href="/staff/showtimes"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🕒</span>
+            <span>Showtimes</span>
+          </Link>
+
+          <Link
+            href="/staff/bookings"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🎟️</span>
+            <span>Bookings</span>
+          </Link>
+
+          <Link
+            href="/staff/combos"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-600 text-sm font-medium"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-black/20 text-xs">🍿</span>
+            <span>Combos</span>
+          </Link>
+
+          <Link
+            href="/staff/customers"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">👥</span>
+            <span>Customers</span>
+          </Link>
         </nav>
-      </div>
+
+        <div className="border-t border-[#242424] px-4 py-3">
+          <Link
+            href="/"
+            className="flex items-center gap-3 text-sm text-gray-300 hover:text-white"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">⮌</span>
+            <span>Back to Site</span>
+          </Link>
+        </div>
+      </aside>
 
       {/* Main Content */}
-      <div className="flex-1 bg-[#141414] text-white p-6">
-        <h1 className="text-3xl font-semibold mb-6">Combos</h1>
-        <p className="text-lg text-gray-400 mb-6">Manage food and drink combos</p>
+      <main className="flex-1 px-8 py-6 bg-[#050505]">
+        <div>
+          <h1 className="text-3xl font-semibold">Combos Management</h1>
+          <p className="mt-1 text-sm text-gray-400">Manage food and drink combos</p>
+        </div>
+
+        {/* Search Bar */}
+        <div className="mt-4">
+          <input
+            type="text"
+            placeholder="Search combos..."
+            value={searchQuery}
+            onChange={handleSearch}
+            className="px-4 py-2 w-full rounded-lg bg-[#1a1a1a] text-white placeholder:text-gray-400"
+          />
+        </div>
+
+        {/* Loading */}
+        {loading && <div className="mt-4 text-sm text-gray-400">Loading combos...</div>}
+
+        {/* Error */}
+        {error && <div className="mt-4 text-sm text-red-400">{error}</div>}
+
+        {/* Combo Cards */}
+        <section className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-4">
+          {filteredCombos.map((combo) => (
+            <div
+              key={combo.combo_id}
+              className="relative overflow-hidden rounded-2xl bg-[#101010] px-5 py-4 border border-[#242424]"
+            >
+              <div className="flex justify-between">
+                <div>
+                  <div className="text-xs text-gray-400">{combo.name}</div>
+                  <div className="mt-2 text-xl font-semibold">{combo.price.toLocaleString('vi-VN')} ₫</div>
+                </div>
+                <div className="self-start">
+                  <img src={combo.image_url} alt={combo.name} className="h-32 w-32 object-cover rounded-md" />
+                </div>
+              </div>
+              <div className="mt-4">
+                <button
+                  onClick={() => handleEditCombo(combo)}
+                  className="text-sm text-blue-400 hover:underline"
+                >
+                  Edit Combo
+                </button>
+              </div>
+            </div>
+          ))}
+        </section>
 
         {/* Add Combo Button */}
-        <div className="mb-6">
+        <div className="mt-6">
           <button
-            onClick={() => setShowModal(true)} // Show modal when clicked
-            className="px-6 py-3 bg-red-600 text-white rounded-lg"
+            onClick={toggleModal}
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-red-600 text-sm text-white hover:bg-red-700"
           >
             + Add Combo
           </button>
         </div>
 
-        {/* Combo List */}
-        <div className="grid grid-cols-2 gap-6 mb-6">
-          {combos.map((combo, index) => (
-            <div key={index} className="bg-black p-6 rounded-lg">
-              <img src={combo.imageUrl} alt={combo.name} className="w-full h-32 object-cover rounded-md mb-4" />
-              <h3 className="text-xl font-semibold text-white mb-2">{combo.name}</h3>
-              <p className="text-sm text-gray-400 mb-4">{combo.description}</p>
-              <p className="text-lg text-yellow-400">{combo.price}</p>
-            </div>
-          ))}
-        </div>
-      </div>
-
-      {/* Modal for Add Combo */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
-            <h2 className="text-2xl font-semibold mb-4">Add New Combo</h2>
-            <form onSubmit={handleSubmit}>
-              {/* Name Input */}
-              <div className="form-group mb-4">
-                <label className="block text-white mb-2">Name</label>
+        {/* Modal for Adding or Editing Combo */}
+        {isModalOpen && (
+          <div className="fixed inset-0 bg-black bg-opacity-50 flex justify-center items-center">
+            <div className="bg-[#101010] p-6 rounded-lg max-w-md w-full">
+              <h2 className="text-xl font-semibold text-white">{isEditing ? 'Edit Combo' : 'Add New Combo'}</h2>
+              <div className="mt-4">
                 <input
                   type="text"
                   name="name"
-                  value={comboData.name}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md"
                   placeholder="Combo name"
-                  required
+                  value={newComboData.name}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 bg-[#1a1a1a] text-white rounded-md"
                 />
               </div>
-
-              {/* Description Input */}
-              <div className="form-group mb-4">
-                <label className="block text-white mb-2">Description</label>
-                <textarea
-                  name="description"
-                  value={comboData.description}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md"
-                  placeholder="What's included in this combo"
-                  required
-                />
-              </div>
-
-              {/* Price Input */}
-              <div className="form-group mb-4">
-                <label className="block text-white mb-2">Price (VND)</label>
+              <div className="mt-4">
                 <input
                   type="number"
                   name="price"
-                  value={comboData.price}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md"
-                  placeholder="Price in VND"
-                  required
+                  placeholder="Price (VND)"
+                  value={newComboData.price}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 bg-[#1a1a1a] text-white rounded-md"
                 />
               </div>
-
-              {/* Image URL Input */}
-              <div className="form-group mb-4">
-                <label className="block text-white mb-2">Image URL</label>
+              <div className="mt-4">
                 <input
                   type="text"
-                  name="imageUrl"
-                  value={comboData.imageUrl}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md"
-                  placeholder="https://example.com/image.jpg"
-                  required
+                  name="image_url"
+                  placeholder="Image URL"
+                  value={newComboData.image_url}
+                  onChange={handleInputChange}
+                  className="w-full px-4 py-2 bg-[#1a1a1a] text-white rounded-md"
                 />
               </div>
-
-              {/* Submit and Cancel Buttons */}
-              <div className="flex justify-between mb-4">
+              <div className="mt-6 flex justify-end">
                 <button
-                  type="button"
-                  onClick={() => setShowModal(false)} // Close modal
-                  className="px-6 py-3 bg-gray-500 text-white rounded-lg"
+                  onClick={toggleModal}
+                  className="text-sm text-gray-400 mr-4"
                 >
                   Cancel
                 </button>
                 <button
-                  type="submit"
-                  className="px-6 py-3 bg-red-600 text-white rounded-lg"
+                  onClick={handleSubmitCombo}
+                  className="px-4 py-2 bg-red-600 text-white rounded-md"
                 >
-                  Add Combo
+                  {isEditing ? 'Save Changes' : 'Add Combo'}
                 </button>
               </div>
-            </form>
+            </div>
           </div>
-        </div>
-      )}
-
-      {/* Styles */}
-      <style jsx>{`
-        .sidebar {
-          width: 250px;
-          min-width: 250px;
-          background-color: #141414;
-          color: white;
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .logo {
-          font-size: 24px;
-          font-weight: bold;
-          margin-bottom: 20px;
-        }
-
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: rgba(0, 0, 0, 0.7);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 100;
-        }
-
-        .modal-content {
-          background-color: #222;
-          padding: 30px;
-          border-radius: 8px;
-          width: 400px;
-        }
-
-        .form-group {
-          margin-bottom: 20px;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 8px;
-          color: white;
-        }
-
-        .form-group input,
-        .form-group textarea {
-          width: 100%;
-          padding: 10px;
-          background-color: #333;
-          color: white;
-          border: 1px solid #555;
-          border-radius: 8px;
-        }
-
-        .bg-gray-700 {
-          background-color: #333;
-        }
-
-        .bg-red-600 {
-          background-color: #e53e3e;
-        }
-
-        .bg-gray-500 {
-          background-color: #6b7280;
-        }
-
-        .text-white {
-          color: white;
-        }
-
-        .rounded-lg {
-          border-radius: 8px;
-        }
-
-        .grid {
-          display: grid;
-          grid-template-columns: repeat(2, 1fr);
-          gap: 20px;
-        }
-
-        .bg-black {
-          background-color: #1f1f1f;
-        }
-
-        .rounded-lg {
-          border-radius: 8px;
-        }
-
-        .p-6 {
-          padding: 20px;
-        }
-
-        /* Adjust layout for smaller screens */
-        @media (max-width: 768px) {
-          .grid {
-            grid-template-columns: 1fr;
-          }
-        }
-      `}</style>
+        )}
+      </main>
     </div>
   );
 };
