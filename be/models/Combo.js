@@ -2,11 +2,11 @@ const { pool } = require('../db/connection');
 
 class Combo {
   static async create(comboData) {
-  const { name, price, image_url } = comboData;
+  const { combo_name, price, image_url } = comboData;
 
   const [result] = await pool.execute(
     'INSERT INTO combo (name, price, image_url) VALUES (?, ?, ?)',
-    [name, price, image_url]
+    [combo_name, price, image_url || null]
   );
 
   // Lấy combo vừa tạo theo id tự sinh
@@ -33,10 +33,17 @@ class Combo {
     const fields = [];
     const params = [];
 
-    Object.keys(comboData).forEach(key => {
-      if (comboData[key] !== undefined && key !== 'combo_id') {
+    // Map combo_name to name for database
+    const mappedData = { ...comboData };
+    if (mappedData.combo_name !== undefined) {
+      mappedData.name = mappedData.combo_name;
+      delete mappedData.combo_name;
+    }
+
+    Object.keys(mappedData).forEach(key => {
+      if (mappedData[key] !== undefined && key !== 'combo_id') {
         fields.push(`${key} = ?`);
-        params.push(comboData[key]);
+        params.push(mappedData[key]);
       }
     });
 

@@ -8,6 +8,8 @@ export default function Navbar() {
   const path = usePathname();
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [userName, setUserName] = useState("User");
+  const [dropdownOpen, setDropdownOpen] = useState(false);
 
   function active(route: string) {
     return path === route ? "text-red-500" : "text-gray-300";
@@ -17,7 +19,17 @@ export default function Navbar() {
   useEffect(() => {
     if (typeof window === "undefined") return;
     const token = localStorage.getItem("token");
+    const userStr = localStorage.getItem("user");
     setIsLoggedIn(!!token);
+    
+    if (userStr) {
+      try {
+        const user = JSON.parse(userStr);
+        setUserName(user.name || "User");
+      } catch (e) {
+        console.error("Failed to parse user:", e);
+      }
+    }
   }, []);
 
   // Optional: keep in sync if token changes in another tab
@@ -34,8 +46,10 @@ export default function Navbar() {
   function handleLogout() {
     if (typeof window !== "undefined") {
       localStorage.removeItem("token");
+      localStorage.removeItem("user");
     }
     setIsLoggedIn(false);
+    setDropdownOpen(false);
     router.push("/"); // redirect to home after logout
   }
 
@@ -71,12 +85,33 @@ export default function Navbar() {
             Sign In
           </Link>
         ) : (
-          <button
-            onClick={handleLogout}
-            className="px-4 py-2 rounded-lg border border-red-600 text-red-500 hover:bg-red-600 hover:text-white transition"
-          >
-            Sign Out
-          </button>
+          <div className="relative">
+            <button
+              onClick={() => setDropdownOpen(!dropdownOpen)}
+              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-red-600 text-red-500 hover:bg-red-600 hover:text-white transition"
+            >
+              <span>{userName}</span>
+              <svg
+                className={`w-4 h-4 transition-transform ${dropdownOpen ? 'rotate-180' : ''}`}
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+
+            {dropdownOpen && (
+              <div className="absolute right-0 mt-2 w-48 bg-[#1a1a1a] border border-[#333] rounded-lg shadow-lg overflow-hidden">
+                <button
+                  onClick={handleLogout}
+                  className="w-full text-left px-4 py-3 text-white hover:bg-red-600 transition"
+                >
+                  Sign Out
+                </button>
+              </div>
+            )}
+          </div>
         )}
       </div>
     </nav>

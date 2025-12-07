@@ -49,7 +49,15 @@ export default function MyBookingsPage() {
     <div className="min-h-screen bg-black text-white">
 
       <div className="max-w-6xl mx-auto px-8 py-12">
-        <h1 className="text-3xl font-bold mb-6">My Tickets</h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">My Tickets</h1>
+          <a
+            href="/"
+            className="px-6 py-3 bg-red-600 rounded-lg text-white font-semibold hover:bg-red-700 transition"
+          >
+            Back to Home
+          </a>
+        </div>
 
         {loading ? (
           <p className="text-gray-400">Loading...</p>

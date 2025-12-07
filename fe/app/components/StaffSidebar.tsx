@@ -137,6 +137,23 @@ export default function StaffSidebar({ activePage }: StaffSidebarProps) {
           <span>Combos</span>
         </Link>
       </nav>
+
+      {/* Sign Out */}
+      <div className="px-3 py-4 border-t border-[#242424]">
+        <button
+          onClick={() => {
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            window.location.href = '/';
+          }}
+          className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-red-600 hover:text-white transition w-full"
+        >
+          <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+            🚪
+          </span>
+          <span>Sign Out</span>
+        </button>
+      </div>
     </aside>
   );
 }

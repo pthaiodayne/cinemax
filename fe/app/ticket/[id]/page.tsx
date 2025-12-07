@@ -54,9 +54,17 @@ export default function TicketDetailPage() {
       <Navbar />
 
       <div className="max-w-5xl mx-auto px-8 py-10">
-        <h1 className="text-3xl font-bold mb-6">
-          Booking #{booking.booking_id}
-        </h1>
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-3xl font-bold">
+            Booking #{booking.booking_id}
+          </h1>
+          <a
+            href="/"
+            className="px-6 py-3 bg-red-600 rounded-lg text-white font-semibold hover:bg-red-700 transition"
+          >
+            Back to Home
+          </a>
+        </div>
 
         <div className="bg-[#111] rounded-xl p-6 mb-6">
           <h2 className="text-xl font-semibold mb-3">Tickets</h2>
@@ -80,7 +88,7 @@ export default function TicketDetailPage() {
           </div>
         )}
 
-        <div className="bg-[#111] rounded-xl p-6">
+        <div className="bg-[#111] rounded-xl p-6 mb-6">
           <p>
              Total Paid:{" "}
             {Number(booking.amount_paid).toLocaleString("vi-VN")} ₫

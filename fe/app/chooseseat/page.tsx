@@ -37,6 +37,7 @@ const ChooseSeatPage: React.FC = () => {
 
   // seatCode -> seatType (normal / vip)
   const [seatTypes, setSeatTypes] = useState<Record<string, SeatType>>({});
+  const [bookedSeats, setBookedSeats] = useState<string[]>([]);
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [seatError, setSeatError] = useState<string | null>(null);
 
@@ -58,6 +59,7 @@ const ChooseSeatPage: React.FC = () => {
         setLoadingSeats(true);
         setSeatError(null);
 
+        // Fetch seat types
         const url = `${API_BASE}/seats/auditorium?theater_id=${theaterId}&screen_number=${screenNumber}`;
         const res = await fetch(url);
 
@@ -80,6 +82,18 @@ const ChooseSeatPage: React.FC = () => {
         });
 
         setSeatTypes(map);
+
+        // Fetch booked seats for this showtime
+        if (date && startTime && endTime) {
+          const bookedUrl = `${API_BASE}/seats/booked?theater_id=${theaterId}&screen_number=${screenNumber}&date=${date}&start_time=${startTime}&end_time=${endTime}`;
+          const bookedRes = await fetch(bookedUrl);
+          
+          if (bookedRes.ok) {
+            const bookedJson = await bookedRes.json();
+            const booked = bookedJson.bookedSeats || [];
+            setBookedSeats(booked.map((s: any) => String(s.seat_number || s)));
+          }
+        }
       } catch (err: any) {
         console.error(err);
         setSeatError(err.message || 'Failed to load seats');
@@ -89,10 +103,13 @@ const ChooseSeatPage: React.FC = () => {
     };
 
     fetchSeats();
-  }, [theaterId, screenNumber]);
+  }, [theaterId, screenNumber, date, startTime, endTime]);
 
   // ---------- CHỌN GHẾ ----------
   const toggleSeatSelection = (seatCode: string) => {
+    // Không cho chọn ghế đã đặt
+    if (bookedSeats.includes(seatCode)) return;
+
     setSelectedSeats((prev) =>
       prev.includes(seatCode)
         ? prev.filter((s) => s !== seatCode)
@@ -100,8 +117,9 @@ const ChooseSeatPage: React.FC = () => {
     );
   };
 
-  // màu ghế dựa vào loại trong DB + trạng thái selected
+  // màu ghế dựa vào loại trong DB + trạng thái selected + booked
   const getSeatColor = (seatCode: string) => {
+    if (bookedSeats.includes(seatCode)) return 'bg-gray-900 text-gray-600 cursor-not-allowed';
     if (selectedSeats.includes(seatCode)) return 'bg-red-600';
 
     const type = seatTypes[seatCode];
@@ -227,9 +245,10 @@ const ChooseSeatPage: React.FC = () => {
                   <button
                     key={seatCode}
                     onClick={() => toggleSeatSelection(seatCode)}
+                    disabled={bookedSeats.includes(seatCode)}
                     className={`w-8 h-8 sm:w-9 sm:h-9 m-1 rounded-md text-xs sm:text-sm flex items-center justify-center ${getSeatColor(
                       seatCode
-                    )} hover:opacity-80 transition`}
+                    )} hover:opacity-80 transition disabled:opacity-50 disabled:cursor-not-allowed`}
                   >
                     {seat}
                   </button>
@@ -256,6 +275,10 @@ const ChooseSeatPage: React.FC = () => {
             <div className="flex items-center gap-1">
               <div className="w-4 h-4 rounded-md bg-red-600" />
               <span>Selected</span>
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="w-4 h-4 rounded-md bg-gray-900" />
+              <span>Booked</span>
             </div>
           </div>
         </div>
