@@ -52,16 +52,28 @@ exports.getOngoing = async (req, res, next) => {
 //create movie (Staff only)
 exports.createMovie = async (req, res, next) => {
   try {
+    const { genres = [], formats = [], ...movieFields } = req.body;
+
     const movieData = {
-      ...req.body,
+      ...movieFields,
       user_id: req.user.userId
     };
 
+    // ✅ 1. Create the movie
     const movieId = await Movie.create(movieData);
 
-    const movie = await Movie.findById(movieId);
+    // ✅ 2. Insert genres
+    for (const genre of genres) {
+      await Movie.addGenre(movieId, genre);
+    }
 
-    console.log(`Movie with ID ${movieId} created successfully`);
+    // ✅ 3. Insert formats
+    for (const format of formats) {
+      await Movie.addFormat(movieId, format);
+    }
+
+    // ✅ 4. Return full movie with genres & formats
+    const movie = await Movie.findById(movieId);
 
     res.status(201).json({
       message: 'Movie created successfully',
@@ -71,6 +83,7 @@ exports.createMovie = async (req, res, next) => {
     next(error);
   }
 };
+
 
 //update movie (Staff only)
 exports.updateMovie = async (req, res, next) => {

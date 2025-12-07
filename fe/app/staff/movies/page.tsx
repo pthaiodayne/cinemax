@@ -10,58 +10,87 @@ interface Movie {
   movie_id: number;
   title: string;
   image_url?: string;
-  genres?: string[];
+  genres: string[];
+  format: string[];
   release_date?: string;
-  plot_description?: string;
   rating?: number;
 }
-
+const GENRE_OPTIONS = [
+  'Action',
+  'Comedy',
+  'Drama',
+  'Horror',
+  'Romance',
+  'Sci-Fi',
+  'Thriller',
+  'Animation',
+  'Fantasy',
+  'Adventure',
+];
+const FORMAT_OPTIONS = ['2D', '3D', 'IMAX', '4D'];
 const MoviesPage: React.FC = () => {
   const [movies, setMovies] = useState<Movie[]>([]);
-  const [isModalOpen, setIsModalOpen] = useState(false);  // Modal state
+  const [isModalOpen, setIsModalOpen] = useState(false);
+
   const [newMovie, setNewMovie] = useState({
     title: '',
-    genres: '',
-    age_restriction: '',
+    genres: [] as string[],
+    formats: [] as string[],
+    age_restrict: '',
+    duration: '',
+    release_date: '',
+    plot_description: '',
+    production_company: '',
+    image_url: '',
   });
 
-  // Fetch movies from the backend
+
+  /* ===================== FETCH MOVIES ===================== */
   useEffect(() => {
     const fetchMovies = async () => {
       try {
         const res = await fetch(`${API_BASE}/movies`);
         if (!res.ok) throw new Error('Failed to fetch movies');
-
         const data = await res.json();
-        setMovies(data.movies); // Assumes the response contains an array of movies
-      } catch (err: any) {
+        setMovies(data.movies || []);
+      } catch (err) {
         console.error(err);
       }
     };
-
     fetchMovies();
   }, []);
 
-  // Toggle modal visibility
+  /* ===================== MODAL ===================== */
   const openModal = () => setIsModalOpen(true);
   const closeModal = () => setIsModalOpen(false);
 
-  // Handle input changes for the new movie
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
     const { name, value } = e.target;
-    setNewMovie((prevState) => ({
-      ...prevState,
-      [name]: value,
-    }));
+    setNewMovie(prev => ({ ...prev, [name]: value }));
   };
 
-  // Handle form submission for adding a new movie
+  /* ===================== ADD MOVIE ===================== */
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+
+    const token = localStorage.getItem('token');
+    if (!token) {
+      alert('Session expired. Please login again.');
+      return;
+    }
+
     const movieData = {
       title: newMovie.title,
-      genres: newMovie.genres.split(',').map((genre) => genre.trim()),
-      age_restriction: newMovie.age_restriction,
+      duration: Number(newMovie.duration),
+      release_date: newMovie.release_date,
+      plot_description: newMovie.plot_description,
+      age_restrict: newMovie.age_restrict,
+      production_company: newMovie.production_company,
+      image_url: newMovie.image_url,
+      genres: newMovie.genres,
+      formats: newMovie.formats
     };
 
     try {
@@ -69,164 +98,206 @@ const MoviesPage: React.FC = () => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(movieData),
       });
 
-      if (!res.ok) throw new Error('Failed to add movie');
-      const data = await res.json();
-      setMovies([...movies, data.movie]); // Add the new movie to the list
-      closeModal(); // Close modal after submitting
-    } catch (err: any) {
-      console.error(err);
-    }
-  };
-
-  // Delete movie by ID
-  const handleDelete = async (id: number) => {
-    try {
-      const res = await fetch(`${API_BASE}/movies/${id}`, {
-        method: 'DELETE',
-      });
-
       if (!res.ok) {
-        console.error('Failed to delete movie');
-      } else {
-        setMovies(movies.filter((movie) => movie.movie_id !== id));
+        const errText = await res.text();
+        throw new Error(errText);
       }
-    } catch (err: any) {
-      console.error('Error deleting movie:', err);
+
+      const data = await res.json();
+      setMovies(prev => [...prev, data.movie]);
+      closeModal();
+    } catch (err) {
+      console.error('Add movie error:', err);
+      alert('Failed to add movie');
     }
   };
+
+  const handleGenreToggle = (genre: string) => {
+  setNewMovie(prev => ({
+    ...prev,
+    genres: prev.genres.includes(genre)
+      ? prev.genres.filter(g => g !== genre)
+      : [...prev.genres, genre],
+  }));
+};
+
+const handleFormatToggle = (format: string) => {
+  setNewMovie(prev => ({
+    ...prev,
+    formats: prev.formats.includes(format)
+      ? prev.formats.filter(f => f !== format)
+      : [...prev.formats, format],
+  }));
+};
+
+
+
+  /* ===================== DELETE MOVIE ===================== */
+const handleDelete = async (id: number) => {
+  const token = localStorage.getItem('token');
+  if (!token) {
+    alert('Session expired. Please login again.');
+    return;
+  }
+
+  if (!confirm('Are you sure you want to delete this movie?')) return;
+
+  try {
+    const res = await fetch(`${API_BASE}/movies/${id}`, {
+      method: 'DELETE',
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (res.ok) {
+      setMovies(prev => prev.filter(m => m.movie_id !== id));
+      return;
+    }
+
+    // 🔴 Not OK → read error message from backend
+    const text = await res.text();
+    let msg = 'Failed to delete movie.';
+    try {
+      const json = JSON.parse(text);
+      if (json.error) msg = json.error;
+    } catch {
+      if (text) msg = text;
+    }
+    alert(msg);
+  } catch (err) {
+    console.error(err);
+    alert('Something went wrong while deleting movie.');
+  }
+};
 
   return (
     <div className="flex min-h-screen bg-[#050505] text-white">
-      {/* SIDEBAR */}
-      <aside className="fixed left-0 top-0 h-screen w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
-        <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
-          <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
-            CA
-          </div>
-          <div>
-            <div className="text-lg font-semibold leading-none">CineAdmin</div>
-            <div className="text-xs text-gray-400 mt-1">Staff Panel</div>
-          </div>
-        </div>
 
-        <nav className="flex-1 px-3 py-4 space-y-1">
-          <Link
-            href="/staff/dashboard"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
-              ⌂
-            </span>
-            <span>Dashboard</span>
-          </Link>
+{/* SIDEBAR */}
+<aside className="fixed left-0 top-0 h-screen w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
+  {/* Header */}
+  <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
+    <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
+      CA
+    </div>
+    <div>
+      <div className="text-lg font-semibold leading-none">CineAdmin</div>
+      <div className="text-xs text-gray-400 mt-1">Staff Panel</div>
+    </div>
+  </div>
 
-          <Link
-            href="/staff/bookings"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
-              🎟️
-            </span>
-            <span>Bookings</span>
-          </Link>
+  {/* Navigation */}
+  <nav className="flex-1 px-3 py-4 space-y-1">
+    <Link
+      href="/staff/dashboard"
+      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium"
+    >
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">⌂</span>
+      <span>Dashboard</span>
+    </Link>
 
-          <Link
-            href="/staff/customers"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
-              👥
-            </span>
-            <span>Customers</span>
-          </Link>
+    <Link
+      href="/staff/bookings"
+      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+    >
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🎟️</span>
+      <span>Bookings</span>
+    </Link>
 
-          <Link
-            href="/staff/movies"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-600 text-sm font-medium"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-black/20 text-xs">
-              🎬
-            </span>
-            <span>Movies</span>
-          </Link>
+    <Link
+      href="/staff/customers"
+      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+    >
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">👥</span>
+      <span>Customers</span>
+    </Link>
 
-          <Link
-            href="/staff/showtimes"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
-              🕒
-            </span>
-            <span>Showtimes</span>
-          </Link>
+    <Link
+      href="/staff/movies"
+      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm bg-red-600 text-gray-300 hover:bg-[#181818]"
+    >
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-black/20 text-xs">🎬</span>
+      <span>Movies</span>
+    </Link>
 
-          <Link
-            href="/staff/combos"
-            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
-          >
-            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
-              🍿
-            </span>
-            <span>Combos</span>
-          </Link>
-        </nav>
-      </aside>
+    <Link
+      href="/staff/showtimes"
+      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+    >
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🕐</span>
+      <span>Showtimes</span>
+    </Link>
 
-      {/* MAIN CONTENT */}
-      <main className="flex-1 ml-64 px-8 py-6 bg-[#050505]">
+    <Link
+      href="/staff/combos"
+      className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]"
+    >
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🍿</span>
+      <span>Combos</span>
+    </Link>
+
+    <Link
+      href="/"
+      className="mt-4 flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-400 hover:bg-[#181818]"
+    >
+      <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">←</span>
+      <span>Back to site</span>
+    </Link>
+  </nav>
+</aside>
+
+      {/* ===================== MAIN ===================== */}
+      <main className="flex-1 ml-64 px-8 py-6">
         <div className="flex justify-between items-center">
           <h1 className="text-3xl font-semibold">Movies</h1>
-          {/* Add Movie Button */}
           <button
             onClick={openModal}
-            className="px-6 py-2 bg-red-600 text-white rounded-lg text-lg"
+            className="px-6 py-2 bg-red-600 rounded-lg"
           >
             + Add Movie
           </button>
         </div>
 
-        <p className="mt-1 text-sm text-gray-400">Manage your cinema movies here.</p>
-
-        {/* Movies Table */}
-        <section className="mt-6">
-          <table className="min-w-full bg-[#101010] rounded-lg overflow-hidden">
+        {/* ================= TABLE ================= */}
+        <div className="mt-6 overflow-x-auto">
+          <table className="w-full bg-[#101010] rounded-lg overflow-hidden">
             <thead>
-              <tr>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Title</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Genres</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Release Date</th>
-                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Actions</th>
+              <tr className="text-gray-400 text-sm">
+                <th className="px-6 py-4 text-left">Title</th>
+                <th className="px-6 py-4 text-left">Genres</th>
+                <th className="px-6 py-4 text-left">Release</th>
+                <th className="px-6 py-4 text-left">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {movies.map((movie) => (
-                <tr key={movie.movie_id}>
-                  <td className="px-6 py-4 text-sm text-gray-300 flex items-center gap-3">
+              {movies.map(movie => (
+                <tr key={movie.movie_id} className="border-t border-[#242424]">
+                  <td className="px-6 py-4 flex items-center gap-3">
                     {movie.image_url && (
                       <img
                         src={movie.image_url}
+                        className="w-12 h-16 rounded object-cover"
                         alt={movie.title}
-                        className="w-12 h-16 object-cover rounded-md"
                       />
                     )}
                     {movie.title}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-300">
-                    {movie.genres?.join(', ') || 'N/A'}
+                  <td className="px-6 py-4 text-gray-400">
+                    {movie.genres?.join(', ') || '—'}
                   </td>
-                  <td className="px-6 py-4 text-sm text-gray-300">{movie.release_date?.slice(0, 10) || 'N/A'}</td>
-                  <td className="px-6 py-4 text-sm">
-                    <Link href={`/staff/movies/edit/${movie.movie_id}`} className="text-blue-500 hover:text-blue-300">
-                      Edit
-                    </Link>
-                    <span className="mx-2">|</span>
+                  <td className="px-6 py-4">
+                    {movie.release_date?.slice(0, 10) || '—'}
+                  </td>
+                  <td className="px-6 py-4">
                     <button
                       onClick={() => handleDelete(movie.movie_id)}
-                      className="text-red-500 hover:text-red-300"
+                      className="text-red-500 hover:underline"
                     >
                       Delete
                     </button>
@@ -235,63 +306,89 @@ const MoviesPage: React.FC = () => {
               ))}
             </tbody>
           </table>
-        </section>
+        </div>
       </main>
 
-      {/* Add Movie Modal */}
+      {/* ===================== MODAL ===================== */}
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
-          <div className="bg-[#111] p-6 rounded-lg max-w-md w-full">
-            <h2 className="text-2xl font-semibold mb-4">Add New Movie</h2>
-            <form onSubmit={handleSubmit}>
-              <div className="mb-4">
-                <label className="block text-sm text-gray-400">Title</label>
+    <div className="fixed inset-0 bg-black/60 flex items-center justify-center overflow-y-auto">
+      <div className="bg-[#111] p-6 rounded-lg w-full max-w-lg max-h-[90vh] overflow-y-auto my-8">
+        <h2 className="text-xl font-semibold mb-4">Add New Movie</h2>
+        <form onSubmit={handleSubmit} className="space-y-3">
+              {[
+                ['title', 'Title'],
+                ['age_restrict', 'Age Restriction (16+)'],
+                ['duration', 'Duration (minutes)', 'number'],
+                ['release_date', '', 'date'],
+                ['production_company', 'Production Company'],
+                ['image_url', 'Image URL'],
+              ].map(([name, label, type]) => (
                 <input
-                  type="text"
-                  name="title"
-                  value={newMovie.title}
+                  key={name}
+                  type={type || 'text'}
+                  name={name}
+                  placeholder={label as string}
+                  value={(newMovie as any)[name]}
                   onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
-                  required
+                  required={name !== 'image_url'}
+                  className="w-full px-4 py-2 bg-[#222] rounded"
                 />
+              ))}
+              {/* Genres multi-select */}
+              <div>
+                <label className="block mb-2 text-sm text-gray-400">Genres</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {GENRE_OPTIONS.map(genre => (
+                    <label
+                      key={genre}
+                      className="flex items-center gap-2 bg-[#222] px-3 py-2 rounded cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={newMovie.genres.includes(genre)}
+                        onChange={() => handleGenreToggle(genre)}
+                        className="accent-red-600"
+                      />
+                      <span>{genre}</span>
+                    </label>
+                  ))}
+                </div>
+              </div>
+              {/* Formats multi-select */}
+              <div>
+                <label className="block mb-2 text-sm text-gray-400">Formats</label>
+                <div className="grid grid-cols-2 gap-2">
+                  {FORMAT_OPTIONS.map(format => (
+                    <label
+                      key={format}
+                      className="flex items-center gap-2 bg-[#222] px-3 py-2 rounded cursor-pointer"
+                    >
+                      <input
+                        type="checkbox"
+                        checked={newMovie.formats.includes(format)}
+                        onChange={() => handleFormatToggle(format)}
+                        className="accent-red-600"
+                      />
+                      <span>{format}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
-              <div className="mb-4">
-                <label className="block text-sm text-gray-400">Genres (comma-separated)</label>
-                <input
-                  type="text"
-                  name="genres"
-                  value={newMovie.genres}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
-                  required
-                />
-              </div>
 
-              <div className="mb-4">
-                <label className="block text-sm text-gray-400">Age Restriction</label>
-                <input
-                  type="text"
-                  name="age_restriction"
-                  value={newMovie.age_restriction}
-                  onChange={handleChange}
-                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
-                  required
-                />
-              </div>
+              <textarea
+                name="plot_description"
+                placeholder="Plot description"
+                value={newMovie.plot_description}
+                onChange={handleChange}
+                className="w-full px-4 py-2 bg-[#222] rounded"
+              />
 
-              <div className="flex justify-between items-center">
-                <button
-                  type="button"
-                  onClick={closeModal}
-                  className="text-sm text-gray-300 hover:text-white"
-                >
+              <div className="flex justify-end gap-3 pt-2">
+                <button type="button" onClick={closeModal}>
                   Cancel
                 </button>
-                <button
-                  type="submit"
-                  className="bg-red-600 text-white px-4 py-2 rounded-lg text-lg"
-                >
+                <button type="submit" className="bg-red-600 px-4 py-2 rounded">
                   Add Movie
                 </button>
               </div>

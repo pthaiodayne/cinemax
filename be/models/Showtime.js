@@ -122,7 +122,7 @@ class Showtime {
 }
 
 
-  static async getAll(filters = {}) {
+static async getAll(filters = {}) {
   let query = `
     SELECT 
       s.theater_id,
@@ -132,15 +132,26 @@ class Showtime {
       DATE_FORMAT(s.date, '%Y-%m-%d') AS date,
       s.user_id,
       s.movie_id,
+
       m.title, 
       m.image_url AS movie_image,
+
       t.name AS theater_name, 
-      t.location
+      t.location,
+
+      a.formats AS format   -- ✅ THIS IS WHAT YOU WERE MISSING
+
     FROM showtime s
-    JOIN movie m ON s.movie_id = m.movie_id
-    JOIN theater t ON s.theater_id = t.theater_id
+    JOIN movie m 
+      ON s.movie_id = m.movie_id
+    JOIN theater t 
+      ON s.theater_id = t.theater_id
+    JOIN auditorium a 
+      ON s.theater_id = a.theater_id 
+     AND s.screen_number = a.screen_number
     WHERE 1=1
   `;
+
   const params = [];
 
   if (filters.date) {
