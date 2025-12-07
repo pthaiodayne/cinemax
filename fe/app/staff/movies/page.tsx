@@ -1,291 +1,308 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
 
-const MoviesPage = () => {
-  const [showModal, setShowModal] = useState(false); // State to show/hide modal
-  const [movieData, setMovieData] = useState({
+const API_BASE =
+  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
+interface Movie {
+  movie_id: number;
+  title: string;
+  image_url?: string;
+  genres?: string[];
+  release_date?: string;
+  plot_description?: string;
+  rating?: number;
+}
+
+const MoviesPage: React.FC = () => {
+  const [movies, setMovies] = useState<Movie[]>([]);
+  const [isModalOpen, setIsModalOpen] = useState(false);  // Modal state
+  const [newMovie, setNewMovie] = useState({
     title: '',
-    description: '',
-    duration: '',
-    rating: '',
     genres: '',
-    ageRestriction: '',
-    status: 'Now Showing',
+    age_restriction: '',
   });
 
-  // Handle changes in input fields
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
+  // Fetch movies from the backend
+  useEffect(() => {
+    const fetchMovies = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/movies`);
+        if (!res.ok) throw new Error('Failed to fetch movies');
+
+        const data = await res.json();
+        setMovies(data.movies); // Assumes the response contains an array of movies
+      } catch (err: any) {
+        console.error(err);
+      }
+    };
+
+    fetchMovies();
+  }, []);
+
+  // Toggle modal visibility
+  const openModal = () => setIsModalOpen(true);
+  const closeModal = () => setIsModalOpen(false);
+
+  // Handle input changes for the new movie
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
-    setMovieData({
-      ...movieData,
+    setNewMovie((prevState) => ({
+      ...prevState,
       [name]: value,
-    });
+    }));
   };
 
-  // Handle form submission
-  const handleSubmit = (e: React.FormEvent) => {
+  // Handle form submission for adding a new movie
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    console.log(movieData); // Log the movie data
-    setShowModal(false); // Close modal after submission
+    const movieData = {
+      title: newMovie.title,
+      genres: newMovie.genres.split(',').map((genre) => genre.trim()),
+      age_restriction: newMovie.age_restriction,
+    };
+
+    try {
+      const res = await fetch(`${API_BASE}/movies`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(movieData),
+      });
+
+      if (!res.ok) throw new Error('Failed to add movie');
+      const data = await res.json();
+      setMovies([...movies, data.movie]); // Add the new movie to the list
+      closeModal(); // Close modal after submitting
+    } catch (err: any) {
+      console.error(err);
+    }
   };
 
-  const movies = [
-    {
-      title: 'Dune: Part Two',
-      duration: '166 min',
-      genre: ['Sci-Fi', 'Adventure'],
-      status: 'Showing',
-      rating: '8.8',
-      ageRestriction: 'PG-13',
-    },
-    {
-      title: 'Godzilla x Kong',
-      duration: '115 min',
-      genre: ['Action', 'Sci-Fi'],
-      status: 'Showing',
-      rating: '7.5',
-      ageRestriction: 'PG-13',
-    },
-    {
-      title: 'Kung Fu Panda 4',
-      duration: '94 min',
-      genre: ['Animation', 'Comedy'],
-      status: 'Showing',
-      rating: '7.2',
-      ageRestriction: 'PG',
-    },
-    {
-      title: 'Deadpool 3',
-      duration: '127 min',
-      genre: ['Action', 'Comedy'],
-      status: 'Upcoming',
-      rating: '0',
-      ageRestriction: 'R',
-    },
-    {
-      title: 'Furiosa',
-      duration: '148 min',
-      genre: ['Action', 'Adventure'],
-      status: 'Upcoming',
-      rating: '0',
-      ageRestriction: 'R',
-    },
-    {
-      title: 'Inside Out 2',
-      duration: '96 min',
-      genre: ['Animation', 'Comedy'],
-      status: 'Upcoming',
-      rating: '0',
-      ageRestriction: 'PG',
-    },
-  ];
+  // Delete movie by ID
+  const handleDelete = async (id: number) => {
+    try {
+      const res = await fetch(`${API_BASE}/movies/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (!res.ok) {
+        console.error('Failed to delete movie');
+      } else {
+        setMovies(movies.filter((movie) => movie.movie_id !== id));
+      }
+    } catch (err: any) {
+      console.error('Error deleting movie:', err);
+    }
+  };
 
   return (
-    <div className="flex">
-      {/* Sidebar */}
-      <div className="sidebar">
-        <div className="logo">CineAdmin</div>
-        <nav>
-          <ul>
-            <li>
-              <Link href="/staff/dashboard">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Dashboard</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/movies">
-                <button className="w-full py-2 px-4 bg-red-600 rounded-md">Movies</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/showtimes">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Showtimes</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/bookings">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Bookings</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/customers">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Customers</button>
-              </Link>
-            </li>
-               <li>
-              <Link href="/staff/combos">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Combos</button>
-              </Link>
-            </li>
-          </ul>
+    <div className="flex min-h-screen bg-[#050505] text-white">
+      {/* SIDEBAR */}
+      <aside className="w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
+        <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
+          <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
+            CA
+          </div>
+          <div>
+            <div className="text-lg font-semibold leading-none">CineAdmin</div>
+            <div className="text-xs text-gray-400 mt-1">Staff Panel</div>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          <Link
+            href="/staff/dashboard"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-black/20 text-xs">
+              ⌂
+            </span>
+            <span>Dashboard</span>
+          </Link>
+
+          <Link
+            href="/staff/movies"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium bg-red-600 text-white"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              🎬
+            </span>
+            <span>Movies</span>
+          </Link>
+
+          <Link
+            href="/staff/showtimes"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              🕒
+            </span>
+            <span>Showtimes</span>
+          </Link>
+
+          <Link
+            href="/staff/bookings"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              🎟️
+            </span>
+            <span>Bookings</span>
+          </Link>
+
+          <Link
+            href="/staff/combos"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              🍿
+            </span>
+            <span>Combos</span>
+          </Link>
+
+          <Link
+            href="/staff/customers"
+            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium text-gray-300 hover:bg-[#181818]"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              👥
+            </span>
+            <span>Customers</span>
+          </Link>
         </nav>
-      </div>
 
-      {/* Main Content */}
-      <div className="flex-1 bg-[#141414] text-white p-6">
-        <h1 className="text-3xl font-semibold mb-6">Movies</h1>
-        <p className="text-lg text-gray-400 mb-6">Manage your movie catalog</p>
+        <div className="border-t border-[#242424] px-4 py-3">
+          <Link
+            href="/"
+            className="flex items-center gap-3 text-sm text-gray-300 hover:text-white"
+          >
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">
+              ⮌
+            </span>
+            <span>Back to Site</span>
+          </Link>
+        </div>
+      </aside>
 
-        {/* Add Movie Button */}
-        <div className="mb-6">
+      {/* MAIN CONTENT */}
+      <main className="flex-1 px-8 py-6 bg-[#050505]">
+        <div className="flex justify-between items-center">
+          <h1 className="text-3xl font-semibold">Movies</h1>
+          {/* Add Movie Button */}
           <button
-            onClick={() => setShowModal(true)}  // Show modal when clicked
-            className="px-6 py-3 bg-red-600 text-white rounded-lg"
+            onClick={openModal}
+            className="px-6 py-2 bg-red-600 text-white rounded-lg text-lg"
           >
             + Add Movie
           </button>
         </div>
 
-        {/* Movie Table */}
-        <table className="movie-table w-full text-left text-gray-400">
-          <thead>
-            <tr className="border-b border-gray-700">
-              <th className="py-3 px-4">Movie</th>
-              <th className="py-3 px-4">Duration</th>
-              <th className="py-3 px-4">Genre</th>
-              <th className="py-3 px-4">Status</th>
-              <th className="py-3 px-4">Rating</th>
-              <th className="py-3 px-4">Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            {movies.map((movie, index) => (
-              <tr key={index} className="border-b border-gray-700">
-                <td className="py-3 px-4 text-white">{movie.title}</td>
-                <td className="py-3 px-4">{movie.duration}</td>
-                <td className="py-3 px-4">{movie.genre.join(', ')}</td>
-                <td className="py-3 px-4">
-                  <span
-                    className={`px-2 py-1 rounded-md ${movie.status === 'Showing' ? 'bg-green-500' : 'bg-blue-500'}`}
-                  >
-                    {movie.status}
-                  </span>
-                </td>
-                <td className="py-3 px-4">{movie.rating}</td>
-                <td className="py-3 px-4">
-                  <button className="text-yellow-400 mr-4">Edit</button>
-                  <button className="text-red-600">Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
+        <p className="mt-1 text-sm text-gray-400">Manage your cinema movies here.</p>
 
-      {/* Modal for Add Movie */}
-      {showModal && (
-        <div className="modal-overlay">
-          <div className="modal-content">
+        {/* Movies Table */}
+        <section className="mt-6">
+          <table className="min-w-full bg-[#101010] rounded-lg overflow-hidden">
+            <thead>
+              <tr>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Title</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Genres</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Release Date</th>
+                <th className="px-6 py-4 text-left text-sm font-semibold text-gray-400">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {movies.map((movie) => (
+                <tr key={movie.movie_id}>
+                  <td className="px-6 py-4 text-sm text-gray-300 flex items-center gap-3">
+                    {movie.image_url && (
+                      <img
+                        src={movie.image_url}
+                        alt={movie.title}
+                        className="w-12 h-16 object-cover rounded-md"
+                      />
+                    )}
+                    {movie.title}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-300">
+                    {movie.genres?.join(', ') || 'N/A'}
+                  </td>
+                  <td className="px-6 py-4 text-sm text-gray-300">{movie.release_date?.slice(0, 10) || 'N/A'}</td>
+                  <td className="px-6 py-4 text-sm">
+                    <Link href={`/staff/movies/edit/${movie.movie_id}`} className="text-blue-500 hover:text-blue-300">
+                      Edit
+                    </Link>
+                    <span className="mx-2">|</span>
+                    <button
+                      onClick={() => handleDelete(movie.movie_id)}
+                      className="text-red-500 hover:text-red-300"
+                    >
+                      Delete
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </section>
+      </main>
+
+      {/* Add Movie Modal */}
+      {isModalOpen && (
+        <div className="fixed inset-0 bg-black/50 flex justify-center items-center">
+          <div className="bg-[#111] p-6 rounded-lg max-w-md w-full">
             <h2 className="text-2xl font-semibold mb-4">Add New Movie</h2>
             <form onSubmit={handleSubmit}>
-              {/* Movie Title */}
-              <div className="form-group mb-4">
-                <label className="block text-white mb-2">Title</label>
+              <div className="mb-4">
+                <label className="block text-sm text-gray-400">Title</label>
                 <input
                   type="text"
                   name="title"
-                  value={movieData.title}
+                  value={newMovie.title}
                   onChange={handleChange}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md"
+                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
                   required
                 />
               </div>
 
-              {/* Movie Description */}
-              <div className="form-group mb-4">
-                <label className="block text-white mb-2">Description</label>
-                <textarea
-                  name="description"
-                  value={movieData.description}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md"
-                  required
-                />
-              </div>
-
-              {/* Duration */}
-              <div className="form-group mb-4">
-                <label className="block text-white mb-2">Duration (min)</label>
-                <input
-                  type="number"
-                  name="duration"
-                  value={movieData.duration}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md"
-                  required
-                />
-              </div>
-
-              {/* Rating */}
-              <div className="form-group mb-4">
-                <label className="block text-white mb-2">Rating</label>
-                <input
-                  type="number"
-                  name="rating"
-                  value={movieData.rating}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md"
-                  required
-                  step="0.1"
-                  min="0"
-                  max="10"
-                />
-              </div>
-
-              {/* Genres */}
-              <div className="form-group mb-4">
-                <label className="block text-white mb-2">Genres (comma-separated)</label>
+              <div className="mb-4">
+                <label className="block text-sm text-gray-400">Genres (comma-separated)</label>
                 <input
                   type="text"
                   name="genres"
-                  value={movieData.genres}
+                  value={newMovie.genres}
                   onChange={handleChange}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md"
+                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
                   required
                 />
               </div>
 
-              {/* Age Restriction */}
-              <div className="form-group mb-4">
-                <label className="block text-white mb-2">Age Restriction</label>
+              <div className="mb-4">
+                <label className="block text-sm text-gray-400">Age Restriction</label>
                 <input
                   type="text"
-                  name="ageRestriction"
-                  value={movieData.ageRestriction}
+                  name="age_restriction"
+                  value={newMovie.age_restriction}
                   onChange={handleChange}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md"
+                  className="w-full px-4 py-2 bg-[#222] text-white rounded-md"
                   required
                 />
               </div>
 
-              {/* Status */}
-              <div className="form-group mb-4">
-                <label className="block text-white mb-2">Status</label>
-                <select
-                  name="status"
-                  value={movieData.status}
-                  onChange={handleChange}
-                  className="w-full p-3 bg-gray-700 text-white rounded-md"
-                >
-                  <option value="Now Showing">Now Showing</option>
-                  <option value="Upcoming">Upcoming</option>
-                </select>
-              </div>
-
-              {/* Submit and Cancel Buttons */}
-              <div className="flex justify-between mb-4">
+              <div className="flex justify-between items-center">
                 <button
                   type="button"
-                  onClick={() => setShowModal(false)}
-                  className="px-6 py-3 bg-gray-500 text-white rounded-lg"
+                  onClick={closeModal}
+                  className="text-sm text-gray-300 hover:text-white"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-6 py-3 bg-red-600 text-white rounded-lg"
+                  className="bg-red-600 text-white px-4 py-2 rounded-lg text-lg"
                 >
                   Add Movie
                 </button>
@@ -294,91 +311,6 @@ const MoviesPage = () => {
           </div>
         </div>
       )}
-
-      {/* Styles */}
-      <style jsx>{`
-        .sidebar {
-          width: 250px;
-          min-width: 250px;
-          background-color: #141414;
-          color: white;
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .logo {
-          font-size: 24px;
-          font-weight: bold;
-          margin-bottom: 20px;
-        }
-
-        .modal-overlay {
-          position: fixed;
-          top: 0;
-          left: 0;
-          right: 0;
-          bottom: 0;
-          background-color: rgba(0, 0, 0, 0.7);
-          display: flex;
-          justify-content: center;
-          align-items: center;
-          z-index: 100;
-        }
-
-        .modal-content {
-          background-color: #222;
-          padding: 30px;
-          border-radius: 8px;
-          width: 400px;
-        }
-
-        .form-group {
-          margin-bottom: 20px;
-        }
-
-        .form-group label {
-          display: block;
-          margin-bottom: 8px;
-          color: white;
-        }
-
-        .form-group input,
-        .form-group textarea,
-        .form-group select {
-          width: 100%;
-          padding: 10px;
-          background-color: #333;
-          color: white;
-          border: 1px solid #555;
-          border-radius: 8px;
-        }
-
-        .form-group textarea {
-          resize: vertical;
-          min-height: 100px;
-        }
-
-        .bg-gray-700 {
-          background-color: #333;
-        }
-
-        .bg-red-600 {
-          background-color: #e53e3e;
-        }
-
-        .bg-gray-500 {
-          background-color: #6b7280;
-        }
-
-        .text-white {
-          color: white;
-        }
-
-        .rounded-lg {
-          border-radius: 8px;
-        }
-      `}</style>
     </div>
   );
 };

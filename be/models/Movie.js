@@ -93,6 +93,22 @@ class Movie {
     query += ' GROUP BY m.movie_id ORDER BY m.release_date DESC';
 
     const [rows] = await pool.execute(query, params);
+    
+    // Add genres and formats for each movie
+    for (const movie of rows) {
+      const [genres] = await pool.execute(
+        'SELECT genre_type FROM genre WHERE movie_id = ?',
+        [movie.movie_id]
+      );
+      movie.genres = genres.map(g => g.genre_type);
+      
+      const [formats] = await pool.execute(
+        'SELECT format_type FROM format WHERE movie_id = ?',
+        [movie.movie_id]
+      );
+      movie.formats = formats.map(f => f.format_type);
+    }
+    
     return rows;
   }
 

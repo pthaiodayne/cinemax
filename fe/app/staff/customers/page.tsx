@@ -1,240 +1,179 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+
 const CustomersPage = () => {
-  // Sample customer data
-  const customers = [
-    {
-      customerId: 'NVA',
-      name: 'Nguyen Van A',
-      email: 'nguyenvana@email.com',
-      phone: '0901234567',
-      membership: 'Gold',
-      points: 2500,
-      totalSpent: 1250000,
-      bookings: 12,
-    },
-    {
-      customerId: 'TTB',
-      name: 'Tran Thi B',
-      email: 'tranthitb@email.com',
-      phone: '0912345678',
-      membership: 'Silver',
-      points: 1200,
-      totalSpent: 680000,
-      bookings: 7,
-    },
-    {
-      customerId: 'LVC',
-      name: 'Le Van C',
-      email: 'levanc@email.com',
-      phone: '0923456789',
-      membership: 'Bronze',
-      points: 450,
-      totalSpent: 285000,
-      bookings: 3,
-    },
-    {
-      customerId: 'PTD',
-      name: 'Pham Thi D',
-      email: 'phamthid@email.com',
-      phone: '0934567890',
-      membership: 'Platinum',
-      points: 5200,
-      totalSpent: 3450000,
-      bookings: 28,
-    },
-  ];
-
-  // Search input state
+  const [customers, setCustomers] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
 
-  // Handle input change for search
-  const handleSearchChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    setSearchQuery(e.target.value);
+  // Fetch bookings and extract unique customers
+  useEffect(() => {
+    const fetchCustomers = async () => {
+      try {
+        const res = await fetch(`${API_BASE}/bookings`, {
+          headers: {
+            'Authorization': `Bearer ${localStorage.getItem('token')}`,
+          },
+        });
+
+        if (!res.ok) {
+          throw new Error('Failed to fetch bookings');
+        }
+
+        const data = await res.json();
+        const bookings = data.bookings || [];
+
+        // Group bookings by customer email
+        const customerMap = new Map();
+        bookings.forEach((booking: any) => {
+          const email = booking.customer_email;
+          if (!customerMap.has(email)) {
+            customerMap.set(email, {
+              customerId: booking.user_id,
+              name: booking.customer_name,
+              email: booking.customer_email,
+              phone: booking.customer_phone || 'N/A',
+              bookings: 0,
+              totalSpent: 0
+            });
+          }
+          const customer = customerMap.get(email);
+          customer.bookings += 1;
+          customer.totalSpent += Number(booking.amount_paid || 0);
+        });
+
+        setCustomers(Array.from(customerMap.values()));
+      } catch (err) {
+        console.error('Error fetching customers:', err);
+        setError('Failed to load customers');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCustomers();
+  }, []);
+
+  // Handle search input change
+  const handleSearch = (event: React.ChangeEvent<HTMLInputElement>) => {
+    setSearchQuery(event.target.value);
   };
 
   // Filter customers based on search query
   const filteredCustomers = customers.filter((customer) =>
-    customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    customer.email.toLowerCase().includes(searchQuery.toLowerCase())
+    customer.name?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    customer.email?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    customer.phone?.includes(searchQuery)
   );
 
   return (
-    <div className="flex">
+    <div className="flex min-h-screen bg-[#050505] text-white">
       {/* Sidebar */}
-      <div className="sidebar">
-        <div className="logo">CineAdmin</div>
-        <nav>
-          <ul>
-            <li>
-              <Link href="/staff/dashboard">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Dashboard</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/movies">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Movies</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/showtimes">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Showtimes</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/bookings">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Bookings</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/customers">
-                <button className="w-full py-2 px-4 bg-red-600 rounded-md">Customers</button>
-              </Link>
-            </li>
-            <li>
-              <Link href="/staff/combos">
-                <button className="w-full py-2 px-4 bg-gray-700 rounded-md">Combos</button>
-              </Link>
-            </li>
-          </ul>
+      <aside className="w-64 bg-[#0b0b0b] border-r border-[#242424] flex flex-col">
+        <div className="flex items-center gap-2 px-6 py-4 border-b border-[#242424]">
+          <div className="h-9 w-9 flex items-center justify-center rounded-full bg-red-600 text-sm font-semibold">
+            CA
+          </div>
+          <div>
+            <div className="text-lg font-semibold leading-none">CineAdmin</div>
+            <div className="text-xs text-gray-400 mt-1">Staff Panel</div>
+          </div>
+        </div>
+
+        <nav className="flex-1 px-3 py-4 space-y-1">
+          <Link href="/staff/dashboard" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">⌂</span>
+            <span>Dashboard</span>
+          </Link>
+
+          <Link href="/staff/bookings" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🎟️</span>
+            <span>Bookings</span>
+          </Link>
+
+          <Link href="/staff/customers" className="flex items-center gap-3 px-3 py-2 rounded-lg bg-red-600 text-sm font-medium">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-black/20 text-xs">👥</span>
+            <span>Customers</span>
+          </Link>
+
+          <Link href="/staff/movies" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🎬</span>
+            <span>Movies</span>
+          </Link>
+
+          <Link href="/staff/showtimes" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🕐</span>
+            <span>Showtimes</span>
+          </Link>
+
+          <Link href="/staff/combos" className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm text-gray-300 hover:bg-[#181818]">
+            <span className="inline-flex h-7 w-7 items-center justify-center rounded-md bg-[#191919] text-xs">🍿</span>
+            <span>Combos</span>
+          </Link>
         </nav>
-      </div>
+      </aside>
 
       {/* Main Content */}
-      <div className="flex-1 bg-[#141414] text-white p-6">
-        <h1 className="text-3xl font-semibold mb-6">Customers</h1>
-        <p className="text-lg text-gray-400 mb-6">Manage customer accounts and loyalty</p>
+      <main className="flex-1 px-8 py-6">
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Customers</h1>
+          <p className="text-gray-400 mt-1">View customer booking statistics</p>
+        </div>
 
         {/* Search Bar */}
         <div className="mb-6">
           <input
             type="text"
             value={searchQuery}
-            onChange={handleSearchChange}
+            onChange={handleSearch}
             placeholder="Search by name or email..."
             className="w-full py-2 px-4 bg-gray-700 rounded-md"
           />
         </div>
 
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-3 bg-red-900/20 border border-red-500 rounded text-red-400">
+            {error}
+          </div>
+        )}
+
         {/* Customers Table */}
-        <table className="w-full text-left text-gray-400">
-          <thead>
-            <tr className="border-b border-gray-700">
-              <th className="py-3 px-4">Customer</th>
-              <th className="py-3 px-4">Contact</th>
-              <th className="py-3 px-4">Membership</th>
-              <th className="py-3 px-4">Points</th>
-              <th className="py-3 px-4">Total Spent</th>
-              <th className="py-3 px-4">Bookings</th>
-            </tr>
-          </thead>
-          <tbody>
-            {filteredCustomers.map((customer) => (
-              <tr key={customer.customerId} className="border-b border-gray-700">
-                <td className="py-3 px-4">{customer.name}</td>
-                <td className="py-3 px-4">{customer.email} <br /> {customer.phone}</td>
-                <td className="py-3 px-4">
-                  <span
-                    className={`px-2 py-1 rounded-md ${
-                      customer.membership === 'Gold'
-                        ? 'bg-yellow-500'
-                        : customer.membership === 'Silver'
-                        ? 'bg-gray-500'
-                        : customer.membership === 'Bronze'
-                        ? 'bg-brown-500'
-                        : 'bg-purple-500'
-                    }`}
-                  >
-                    {customer.membership}
-                  </span>
-                </td>
-                <td className="py-3 px-4">{customer.points}</td>
-                <td className="py-3 px-4">{customer.totalSpent.toLocaleString()} ₫</td>
-                <td className="py-3 px-4">{customer.bookings} bookings</td>
+        {loading ? (
+          <div className="text-gray-400">Loading customers...</div>
+        ) : filteredCustomers.length === 0 ? (
+          <div className="text-gray-400">No customers found</div>
+        ) : (
+          <table className="w-full text-left text-gray-400">
+            <thead>
+              <tr className="border-b border-gray-700">
+                <th className="py-3 px-4">Customer</th>
+                <th className="py-3 px-4">Contact</th>
+                <th className="py-3 px-4">Bookings</th>
+                <th className="py-3 px-4">Total Spent</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-
-      {/* Styles */}
-      <style jsx>{`
-        .sidebar {
-          width: 250px;
-          min-width: 250px;
-          background-color: #141414;
-          color: white;
-          padding: 20px;
-          display: flex;
-          flex-direction: column;
-        }
-
-        .logo {
-          font-size: 24px;
-          font-weight: bold;
-          margin-bottom: 20px;
-        }
-
-        .sidebar nav ul {
-          list-style: none;
-          padding: 0;
-        }
-
-        .sidebar nav ul li {
-          margin-bottom: 10px;
-        }
-
-        .sidebar nav ul li a {
-          color: white;
-          text-decoration: none;
-          font-size: 18px;
-          display: block;
-          padding: 10px;
-          border-radius: 5px;
-        }
-
-        .sidebar nav ul li a:hover {
-          background-color: #333;
-        }
-
-        .customers-table {
-          width: 100%;
-          border-collapse: collapse;
-        }
-
-        .customers-table th,
-        .customers-table td {
-          padding: 10px;
-          border-bottom: 1px solid #333;
-        }
-
-        .customers-table th {
-          background-color: #222;
-        }
-
-        .customers-table tbody tr:hover {
-          background-color: #222;
-        }
-
-        .bg-yellow-500 {
-          background-color: #fbbf24;
-        }
-
-        .bg-gray-500 {
-          background-color: #6b7280;
-        }
-
-        .bg-brown-500 {
-          background-color: #9e7b44;
-        }
-
-        .bg-purple-500 {
-          background-color: #6b4f96;
-        }
-      `}</style>
+            </thead>
+            <tbody>
+              {filteredCustomers.map((customer) => (
+                <tr key={customer.email} className="border-b border-gray-700 hover:bg-gray-800">
+                  <td className="py-3 px-4">{customer.name}</td>
+                  <td className="py-3 px-4">
+                    <div className="text-sm">{customer.email}</div>
+                    <div className="text-xs text-gray-500">{customer.phone}</div>
+                  </td>
+                  <td className="py-3 px-4">{customer.bookings} bookings</td>
+                  <td className="py-3 px-4">{customer.totalSpent.toLocaleString('vi-VN')} ₫</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </main>
     </div>
   );
 };

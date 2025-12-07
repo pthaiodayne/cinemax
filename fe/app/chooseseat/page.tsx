@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
 
 const API_BASE =
-  process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
+  process.env.NEXT_PUBLIC_API_BASE || 'http://localhost:8000/api';
 
 type SeatType = 'normal' | 'vip' | '';
 
@@ -37,7 +37,6 @@ const ChooseSeatPage: React.FC = () => {
 
   // seatCode -> seatType (normal / vip)
   const [seatTypes, setSeatTypes] = useState<Record<string, SeatType>>({});
-  const [bookedSeats, setBookedSeats] = useState<string[]>([]);
   const [loadingSeats, setLoadingSeats] = useState(false);
   const [seatError, setSeatError] = useState<string | null>(null);
 
@@ -59,7 +58,6 @@ const ChooseSeatPage: React.FC = () => {
         setLoadingSeats(true);
         setSeatError(null);
 
-        // Fetch all seats in auditorium
         const url = `${API_BASE}/seats/auditorium?theater_id=${theaterId}&screen_number=${screenNumber}`;
         const res = await fetch(url);
 
@@ -82,20 +80,6 @@ const ChooseSeatPage: React.FC = () => {
         });
 
         setSeatTypes(map);
-
-        // Fetch booked seats for this showtime
-        if (date && startTime && endTime) {
-          const bookedUrl = `${API_BASE}/seats/booked?theater_id=${theaterId}&screen_number=${screenNumber}&start_time=${startTime}&end_time=${endTime}&date=${date}`;
-          const bookedRes = await fetch(bookedUrl);
-          
-          if (bookedRes.ok) {
-            const bookedJson = await bookedRes.json();
-            const booked: string[] = Array.isArray(bookedJson) 
-              ? bookedJson.map((s: any) => String(s.seat_number))
-              : bookedJson.seats?.map((s: any) => String(s.seat_number)) || [];
-            setBookedSeats(booked);
-          }
-        }
       } catch (err: any) {
         console.error(err);
         setSeatError(err.message || 'Failed to load seats');
@@ -105,13 +89,10 @@ const ChooseSeatPage: React.FC = () => {
     };
 
     fetchSeats();
-  }, [theaterId, screenNumber, date, startTime, endTime]);
+  }, [theaterId, screenNumber]);
 
   // ---------- CHỌN GHẾ ----------
   const toggleSeatSelection = (seatCode: string) => {
-    // Don't allow selecting booked seats
-    if (bookedSeats.includes(seatCode)) return;
-    
     setSelectedSeats((prev) =>
       prev.includes(seatCode)
         ? prev.filter((s) => s !== seatCode)
@@ -121,9 +102,6 @@ const ChooseSeatPage: React.FC = () => {
 
   // màu ghế dựa vào loại trong DB + trạng thái selected
   const getSeatColor = (seatCode: string) => {
-    // Booked seats are gray and disabled
-    if (bookedSeats.includes(seatCode)) return 'bg-gray-500 cursor-not-allowed opacity-50';
-    
     if (selectedSeats.includes(seatCode)) return 'bg-red-600';
 
     const type = seatTypes[seatCode];
